@@ -1,0 +1,194 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #0f1115;
+    --surface: #1a1d24;
+    --surface-secondary: #252932;
+    --text-primary: #ffffff;
+    --text-secondary: #a1a1aa;
+    --border: rgba(255, 255, 255, 0.08);
+    --primary: #d4821e;
+    --primary-hover: #e89c3a;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --error: #ef4444;
+    --info: #3b82f6;
+  }
+
+  body {
+    @apply bg-surface-primary text-white font-sans antialiased;
+    background-color: var(--background);
+  }
+}
+
+@layer components {
+  /* Layout utilities */
+  .container-app {
+    @apply w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+
+  /* Cards */
+  .card {
+    @apply bg-surface-secondary border border-white/[0.08] rounded-2xl shadow-card backdrop-blur-sm;
+  }
+  .card-hover {
+    @apply transition-all duration-300 hover:border-brand-500/30 hover:shadow-card-hover hover:-translate-y-1;
+  }
+  .card-elevated {
+    @apply bg-surface-tertiary border border-white/[0.08] rounded-2xl shadow-card backdrop-blur-sm;
+  }
+
+  /* Buttons */
+  .btn-base {
+    @apply inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-primary {
+    @apply btn-base bg-brand-500 text-white hover:bg-brand-400 shadow-glow-sm hover:shadow-glow-gold;
+  }
+  .btn-secondary {
+    @apply btn-base bg-surface-tertiary border border-white/10 text-white hover:bg-white/[0.06] hover:border-brand-500/50;
+  }
+  .btn-ghost {
+    @apply btn-base bg-transparent text-dark-100 hover:text-white hover:bg-white/[0.04];
+  }
+  .btn-danger {
+    @apply btn-base bg-error/10 text-error hover:bg-error/20 border border-error/20;
+  }
+  .btn-icon {
+    @apply p-2.5 rounded-xl text-dark-100 hover:text-white hover:bg-surface-tertiary border border-transparent hover:border-white/10 transition-all active:scale-95 disabled:opacity-50;
+  }
+
+  /* Forms */
+  .input {
+    @apply w-full bg-surface-tertiary border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm placeholder-dark-300 focus:outline-none focus:border-brand-500/50 transition-colors;
+  }
+  .select {
+    @apply w-full bg-surface-tertiary border border-white/10 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-brand-500/50 transition-colors cursor-pointer;
+  }
+  .input-label {
+    @apply block text-sm font-medium text-dark-100 mb-1.5;
+  }
+
+  /* Badges */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold capitalize whitespace-nowrap;
+  }
+  .badge-waiting {
+    @apply badge bg-warning/10 text-warning border border-warning/20;
+  }
+  .badge-called {
+    @apply badge bg-amber-500/10 text-amber-400 border border-amber-500/20;
+  }
+  .badge-serving {
+    @apply badge bg-success/10 text-success border border-success/20;
+  }
+  .badge-completed {
+    @apply badge bg-white/10 text-white border border-white/20;
+  }
+  .badge-cancelled {
+    @apply badge bg-error/10 text-error border border-error/20;
+  }
+  .badge-skipped {
+    @apply badge bg-purple-500/10 text-purple-400 border border-purple-500/20;
+  }
+  .badge-expired {
+    @apply badge bg-dark-400/30 text-dark-200 border border-white/10;
+  }
+
+  /* Stat card — used in Dashboard & Analytics */
+  .stat-card {
+    @apply card p-5;
+  }
+  .stat-label {
+    @apply text-xs font-semibold text-dark-200 uppercase tracking-wider;
+  }
+  .stat-value {
+    @apply text-3xl font-display font-bold text-white leading-none;
+  }
+
+  /* Divider — thin horizontal separator */
+  .divider {
+    @apply h-px bg-white/[0.06] w-full;
+  }
+}
+
+/* Scrollbar styling for queue lists */
+@layer utilities {
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-white/10 rounded-full hover:bg-white/20;
+  }
+
+  /* Gradient text utility */
+  .text-gradient-brand {
+    @apply bg-gradient-brand bg-clip-text text-transparent;
+  }
+
+  /* Background grid pattern */
+  .bg-grid {
+    background-image: radial-gradient(circle at 1px 1px, rgba(255,255,255,0.04) 1px, transparent 0);
+    background-size: 32px 32px;
+  }
+
+  /* Screen-reader only — visible on keyboard focus (used by skip links) */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+  .focus\:not-sr-only:focus {
+    position: fixed;
+    width: auto;
+    height: auto;
+    padding: revert;
+    margin: 0;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+  }
+}
+
+/*
+ * Reduced-motion: disable non-essential animations for users who prefer it.
+ * Preserves opacity transitions (important for loading feedback) but
+ * removes transform and long-duration spin animations.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Allow the spinner border-color to still transition for visibility */
+  .animate-spin {
+    animation: none !important;
+    border-top-color: theme('colors.brand.500');
+  }
+}

@@ -1,0 +1,22 @@
+# Environment files (never commit secrets)
+.env
+.env.*
+!.env.example
+
+# Dependencies & build artifacts
+node_modules/
+venv/
+.venv/
+
+# Frontend build output (may embed VITE_* values from local .env)
+salon-frontend/dist/
+
+# Python
+__pycache__/
+*.py[cod]
+*.log
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
