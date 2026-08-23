@@ -2,21 +2,28 @@
 -- PHASE K3.2: SUBSCRIPTION & ENTITLEMENT FOUNDATION
 -- ==========================================
 
--- 1. Create Enums
-CREATE TYPE subscription_status AS ENUM (
-    'trialing', 
-    'active', 
-    'past_due', 
-    'cancelled', 
-    'expired', 
-    'suspended'
-);
+DO $$ BEGIN
+    CREATE TYPE subscription_status AS ENUM (
+        'trialing', 
+        'active', 
+        'past_due', 
+        'cancelled', 
+        'expired', 
+        'suspended'
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
-CREATE TYPE billing_interval_type AS ENUM (
-    'monthly', 
-    'yearly', 
-    'lifetime'
-);
+DO $$ BEGIN
+    CREATE TYPE billing_interval_type AS ENUM (
+        'monthly', 
+        'yearly', 
+        'lifetime'
+    );
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 -- 2. Create subscription_plans table
 CREATE TABLE subscription_plans (

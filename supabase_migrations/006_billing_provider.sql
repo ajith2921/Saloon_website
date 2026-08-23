@@ -51,19 +51,23 @@ ALTER TABLE billing_customers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE payment_transactions ENABLE ROW LEVEL SECURITY;
 
 -- Billing Customers RLS
+DROP POLICY IF EXISTS "Salon owners can view their own billing customers" ON billing_customers;
 -- Salon owners can view their own billing customer mapping.
 CREATE POLICY "Salon owners can view their own billing customers" ON billing_customers 
     FOR SELECT USING (auth.uid() IN (SELECT owner_id FROM salons WHERE salons.id = billing_customers.salon_id));
 
+DROP POLICY IF EXISTS "Super admins view all billing customers" ON billing_customers;
 -- Super admins can view all billing customers.
 CREATE POLICY "Super admins view all billing customers" ON billing_customers 
     FOR ALL USING (auth.uid() IN (SELECT id FROM profiles WHERE role = 'super_admin'));
 
 -- Payment Transactions RLS
+DROP POLICY IF EXISTS "Salon owners can view their own payment transactions" ON payment_transactions;
 -- Salon owners can view their own payment transactions.
 CREATE POLICY "Salon owners can view their own payment transactions" ON payment_transactions 
     FOR SELECT USING (auth.uid() IN (SELECT owner_id FROM salons WHERE salons.id = payment_transactions.salon_id));
 
+DROP POLICY IF EXISTS "Super admins view all payment transactions" ON payment_transactions;
 -- Super admins can view all payment transactions.
 CREATE POLICY "Super admins view all payment transactions" ON payment_transactions 
     FOR ALL USING (auth.uid() IN (SELECT id FROM profiles WHERE role = 'super_admin'));
