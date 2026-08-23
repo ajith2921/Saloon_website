@@ -41,6 +41,7 @@ const Revenue         = lazy(() => import('../pages/admin/Revenue'))
 const Analytics       = lazy(() => import('../pages/admin/Analytics'))
 const Advertisements  = lazy(() => import('../pages/admin/Advertisements'))
 const Settings        = lazy(() => import('../pages/admin/Settings'))
+const Subscription    = lazy(() => import('../pages/admin/Subscription'))
 
 // ─── Super Admin pages — always lazy-loaded ───────────────────────────────────
 // PlatformAnalytics imports Recharts — splitting keeps it out of every user bundle.
@@ -167,6 +168,11 @@ export default function AppRouter() {
         <Route path="settings" element={
           <Suspense fallback={<PageLoader />}>
             <ProtectedRoute roles={OWNER_ROLES}><Settings /></ProtectedRoute>
+          </Suspense>
+        } />
+        <Route path="subscription" element={
+          <Suspense fallback={<PageLoader />}>
+            <ProtectedRoute roles={OWNER_ROLES}><Subscription /></ProtectedRoute>
           </Suspense>
         } />
       </Route>

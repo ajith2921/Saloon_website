@@ -33,15 +33,16 @@ export default function Subscriptions() {
         subtitle="Manage platform subscription plans. Automated payments are under development."
       />
 
-      {/* Coming soon notice */}
-      <div className="card p-5 mb-8 border border-amber-500/20 bg-amber-500/[0.04]">
+      {/* Billing live notice */}
+      <div className="card p-5 mb-8 border border-green-500/20 bg-green-500/[0.04]">
         <div className="flex items-start gap-3">
-          <Zap className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
+          <Zap className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
           <div>
-            <p className="text-sm font-semibold text-amber-400 mb-1">Billing Automation Phase K3.2</p>
+            <p className="text-sm font-semibold text-green-400 mb-1">Razorpay Billing is Live (TEST MODE)</p>
             <p className="text-xs text-dark-100 leading-relaxed">
-              Database and backend foundation is complete. Payment gateway integration (Stripe/Razorpay) is pending Phase K3.3.
-              For now, manual database assignment is required to change a salon&apos;s active subscription.
+              Salon owners can now subscribe to plans via <strong className="text-white">/admin/subscription</strong>. 
+              Subscription state is managed exclusively by the backend through verified Razorpay webhooks. 
+              Manual plan assignment via this page is not supported — subscription state must not be changed from this dashboard.
             </p>
           </div>
         </div>

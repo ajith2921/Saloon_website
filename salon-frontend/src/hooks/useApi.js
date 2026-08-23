@@ -103,3 +103,24 @@ export function useNotifications() {
 export function useSalonCustomers(salonId) {
   return useFetch(salonId ? `/api/salons/${salonId}/customers` : null)
 }
+
+/**
+ * All active subscription plans (public — no auth required)
+ */
+export function useSubscriptionPlans() {
+  return useFetch('/api/subscriptions/plans')
+}
+
+/**
+ * Current salon's subscription (salon_owner only — 404 means no plan yet)
+ */
+export function useMySubscription() {
+  return useFetch('/api/subscriptions/me')
+}
+
+/**
+ * Current salon's entitlements/limits (salon_owner only)
+ */
+export function useMyEntitlements() {
+  return useFetch('/api/subscriptions/entitlements')
+}

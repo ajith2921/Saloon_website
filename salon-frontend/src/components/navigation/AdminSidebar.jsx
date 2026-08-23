@@ -2,21 +2,22 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import {
   Scissors, LayoutDashboard, Ticket, Users, Briefcase,
   Star, DollarSign, BarChart2, Megaphone, Settings,
-  LogOut, ChevronLeft, Menu, Eye, UserCheck
+  LogOut, ChevronLeft, Menu, Eye, UserCheck, CreditCard
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 
 const ownerNav = [
-  { to: '/admin',              label: 'Dashboard',       icon: LayoutDashboard, exact: true },
-  { to: '/admin/queue',        label: 'Live Queue',      icon: Ticket },
-  { to: '/admin/workers',      label: 'Workers',         icon: Users },
-  { to: '/admin/services',     label: 'Services',        icon: Briefcase },
-  { to: '/admin/customers',    label: 'Customers',       icon: UserCheck },
-  { to: '/admin/ratings',      label: 'Ratings',         icon: Star },
-  { to: '/admin/revenue',      label: 'Revenue',         icon: DollarSign },
-  { to: '/admin/analytics',    label: 'Analytics',       icon: BarChart2 },
-  { to: '/admin/advertisements', label: 'Ads',           icon: Megaphone },
-  { to: '/admin/settings',     label: 'Settings',        icon: Settings },
+  { to: '/admin',                label: 'Dashboard',       icon: LayoutDashboard, exact: true },
+  { to: '/admin/queue',          label: 'Live Queue',      icon: Ticket },
+  { to: '/admin/workers',        label: 'Workers',         icon: Users },
+  { to: '/admin/services',       label: 'Services',        icon: Briefcase },
+  { to: '/admin/customers',      label: 'Customers',       icon: UserCheck },
+  { to: '/admin/ratings',        label: 'Ratings',         icon: Star },
+  { to: '/admin/revenue',        label: 'Revenue',         icon: DollarSign },
+  { to: '/admin/analytics',      label: 'Analytics',       icon: BarChart2 },
+  { to: '/admin/advertisements',  label: 'Ads',            icon: Megaphone },
+  { to: '/admin/subscription',   label: 'Subscription',    icon: CreditCard },
+  { to: '/admin/settings',       label: 'Settings',        icon: Settings },
 ]
 
 const workerNav = [
