@@ -56,10 +56,15 @@ class TestSubscriptionAPI(unittest.TestCase):
         app.dependency_overrides = {}
 
     def test_unauthenticated_access_rejected(self):
-        """GET /api/subscriptions/me requires auth."""
-        # Using the standard HTTPBearer failure mock or no override
+        """GET /api/subscriptions/me requires auth.
+        FastAPI HTTPBearer returns 401 (not 403) when the Authorization
+        header is absent. Verified live: the deployed endpoint returns
+        HTTP 401 {"detail":"Not authenticated"}.
+        """
         resp = self.client.get("/api/subscriptions/me")
-        self.assertEqual(resp.status_code, 403)
+        # HTTPBearer raises 403 in older FastAPI versions and 401 in newer ones.
+        # Both are correct rejections. Accept either.
+        self.assertIn(resp.status_code, [401, 403])
         
     def test_customer_access_rejected(self):
         """Customers cannot access the salon owner subscription endpoint."""

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request, HTTPException, Depends
-from app.dependencies import supabase_admin
+from app.database import supabase_admin
 from app.config import settings
 import razorpay
 import logging

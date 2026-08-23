@@ -76,27 +76,19 @@ def get_admin_live_queue(
 
 @router.get("/{salon_id}/stats")
 def get_salon_stats(salon_id: UUID):
-    """Returns live stats for the salon details page sidebar."""
-    today = str(date.today())
-
-    queue_res = supabase_admin.table("tokens").select("id, status").eq("salon_id", salon_id).eq("date", today).execute()
-    tokens_today = queue_res.data or []
-
-    waiting   = sum(1 for t in tokens_today if t["status"] == "waiting")
-    serving   = sum(1 for t in tokens_today if t["status"] in ("called", "serving"))
-    completed = sum(1 for t in tokens_today if t["status"] == "completed")
-
-    ratings_res = supabase_admin.table("ratings").select("rating").eq("salon_id", salon_id).execute()
-    ratings_data = ratings_res.data or []
-    avg_rating = round(sum(r["rating"] for r in ratings_data) / len(ratings_data), 1) if ratings_data else 0.0
+    # Call the new RPC function to compute stats in the database
+    res = supabase_admin.rpc("get_salon_stats", {"p_salon_id": str(salon_id)}).execute()
+    
+    if res.data:
+        return res.data
 
     return {
-        "waiting": waiting,
-        "serving": serving,
-        "completed_today": completed,
-        "total_today": len(tokens_today),
-        "avg_rating": avg_rating,
-        "review_count": len(ratings_data),
+        "waiting": 0,
+        "serving": 0,
+        "completed_today": 0,
+        "total_today": 0,
+        "avg_rating": 0.0,
+        "review_count": 0,
     }
 
 
@@ -159,29 +151,9 @@ def get_salon_customers(salon_id: UUID, user: dict = Depends(get_current_user_wi
     """Returns distinct customers who have had a token at this salon."""
     require_salon_access(user, salon_id, {"salon_owner"})
 
-    # Get most recent token per unique customer
-    res = supabase_admin.table("tokens") \
-        .select("customer_id, date, status, token_number, profiles!customer_id(id, full_name, phone, avatar_url)") \
-        .eq("salon_id", salon_id) \
-        .order("created_at", desc=True) \
-        .limit(200) \
-        .execute()
-
-    # Deduplicate by customer_id, keep most recent
-    seen = set()
-    customers = []
-    for t in (res.data or []):
-        cid = t.get("customer_id")
-        if cid and cid not in seen:
-            seen.add(cid)
-            profile = t.get("profiles") or {}
-            customers.append({
-                "id": cid,
-                "full_name": profile.get("full_name", "Unknown"),
-                "phone": profile.get("phone"),
-                "avatar_url": profile.get("avatar_url"),
-                "last_visit": t.get("date"),
-                "last_token_status": t.get("status"),
-            })
+    # Call the new RPC function to fetch unique customers directly from the DB
+    res = supabase_admin.rpc("get_salon_customers", {"p_salon_id": str(salon_id)}).execute()
+    
+    customers = res.data if res.data else []
 
     return {"customers": customers}

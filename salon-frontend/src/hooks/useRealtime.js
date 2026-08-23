@@ -1,79 +1,59 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useEffect } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import api from '../lib/api'
 
-// Public queue data is intentionally fetched from the backend. A direct browser
-// subscription to `tokens` would require public SELECT access and expose fields
-// such as customer_id. This keeps the public payload limited to safe queue data.
 const PUBLIC_QUEUE_REFRESH_MS = 10_000
 const PRIVATE_TOKEN_REFRESH_MS = 8_000
 
 export function useRealtimeQueue(salonId, onTokenChange, adminMode = false) {
-  const [tokens, setTokens] = useState([])
-  const [loading, setLoading] = useState(true)
+  const queryClient = useQueryClient()
+  const endpoint = adminMode
+    ? `/api/salons/${salonId}/queue/admin`
+    : `/api/salons/${salonId}/queue/live`
 
-  const loadTokens = useCallback(async () => {
-    if (!salonId) {
-      setTokens([])
-      setLoading(false)
-      return
-    }
-    try {
-      const endpoint = adminMode
-        ? `/api/salons/${salonId}/queue/admin`
-        : `/api/salons/${salonId}/queue/live`
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: [endpoint],
+    queryFn: async () => {
       const { data } = await api.get(endpoint)
-      const nextTokens = data.tokens ?? []
-      setTokens(nextTokens)
-      onTokenChange?.(nextTokens)
-    } catch {
-      // Keep the last known queue visible during a transient network failure.
-    } finally {
-      setLoading(false)
-    }
-  }, [salonId, onTokenChange, adminMode])
+      return data.tokens ?? []
+    },
+    enabled: !!salonId,
+    refetchInterval: PUBLIC_QUEUE_REFRESH_MS,
+    staleTime: 5000,
+  })
+
+  const tokens = data ?? []
 
   useEffect(() => {
-    loadTokens()
-    if (!salonId) return undefined
-    const timer = window.setInterval(loadTokens, PUBLIC_QUEUE_REFRESH_MS)
-    return () => window.clearInterval(timer)
-  }, [salonId, loadTokens])
+    if (tokens.length > 0) {
+      onTokenChange?.(tokens)
+    }
+  }, [tokens, onTokenChange])
 
   const activeTokens  = tokens.filter((t) => ['waiting', 'called', 'serving'].includes(t.status))
   const currentToken  = tokens.find((t) => t.status === 'serving') ?? tokens.find((t) => t.status === 'called')
   const waitingTokens = tokens.filter((t) => t.status === 'waiting')
 
-  return { tokens, activeTokens, currentToken, waitingTokens, loading, refetch: loadTokens }
+  return { tokens, activeTokens, currentToken, waitingTokens, loading: isLoading, refetch }
 }
 
-// Private token status uses the protected API, which verifies ownership before
-// returning the record. It is polling temporarily; secure broadcast channels
-// can be introduced later without reopening table-level reads.
 export function useRealtimeToken(tokenId, onStatusChange) {
-  const [tokenData, setTokenData] = useState(null)
-
-  const loadToken = useCallback(async () => {
-    if (!tokenId) return
-    try {
+  const { data: tokenData, isLoading, refetch } = useQuery({
+    queryKey: ['/api/tokens', tokenId],
+    queryFn: async () => {
       const { data } = await api.get(`/api/tokens/${tokenId}`)
-      setTokenData((previous) => {
-        if (previous?.status && previous.status !== data.status) onStatusChange?.(data)
-        return data
-      })
-    } catch {
-      // The main token page owns the visible error/empty state.
-    }
-  }, [tokenId, onStatusChange])
+      return data
+    },
+    enabled: !!tokenId,
+    refetchInterval: PRIVATE_TOKEN_REFRESH_MS,
+  })
 
   useEffect(() => {
-    if (!tokenId) {
-      setTokenData(null)
-      return undefined
+    if (tokenData?.status) {
+      onStatusChange?.(tokenData)
     }
-    loadToken()
-    const timer = window.setInterval(loadToken, PRIVATE_TOKEN_REFRESH_MS)
-    return () => window.clearInterval(timer)
-  }, [tokenId, loadToken])
+  }, [tokenData, onStatusChange])
 
-  return { tokenData, refetch: loadToken }
+  return { tokenData, refetch }
 }
+

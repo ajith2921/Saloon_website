@@ -95,8 +95,8 @@ CREATE POLICY "Salon owners can view their own subscriptions" ON subscriptions
 CREATE POLICY "Super admins manage all subscriptions" ON subscriptions 
     FOR ALL USING (auth.uid() IN (SELECT id FROM profiles WHERE role = 'super_admin'));
 
--- 7. Insert Seed Plans (Business definitions pending)
-INSERT INTO subscription_plans (name, description, price, max_workers, max_services, is_active, sort_order, features) VALUES
-('Free Tier', 'Basic queue management for single barbers', 0.00, 1, 5, true, 10, '["Up to 5 services", "1 Barber", "Standard Queue"]'::jsonb),
-('Essential', 'Perfect for growing salons with a small team', 999.00, 5, 20, true, 20, '["Up to 20 services", "Up to 5 Barbers", "Analytics Dashboard"]'::jsonb),
-('Professional', 'Advanced features for large salons', 2499.00, 15, 50, true, 30, '["Up to 50 services", "Up to 15 Barbers", "Advanced Analytics", "Priority Support"]'::jsonb);
+-- 7. Insert Seed Plans
+INSERT INTO subscription_plans (name, description, price, max_workers, max_services, is_active, sort_order, features, billing_interval) VALUES
+('Free Tier', 'Basic queue management for single barbers', 0.00, 1, 5, true, 10, '["Up to 5 services", "1 Barber", "Standard Queue"]'::jsonb, 'monthly'),
+('Premium (Monthly)', 'Perfect for growing salons. Manage up to 10 barbers, track live queues, and access daily revenue insights.', 299.00, 10, 20, true, 20, '["Up to 20 services", "Up to 10 Barbers", "Analytics Dashboard", "Live Queue Management"]'::jsonb, 'monthly'),
+('Premium (Yearly)', 'Best value for established salons. All premium features, priority support, and complete analytics for a full year (Save ~₹589).', 2999.00, 999, 999, true, 30, '["Unlimited services", "Unlimited Barbers", "Advanced Analytics", "Priority Support"]'::jsonb, 'yearly');

@@ -1,5 +1,6 @@
 import { useParams } from 'react-router-dom'
 import { Clock } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useRealtimeQueue } from '../../hooks/useRealtime'
 import { useSalon } from '../../hooks/useApi'
 import { TokenBadge, Spinner } from '../../components/ui'
@@ -37,17 +38,27 @@ export default function LiveQueue() {
               <p className="text-dark-100 text-sm relative z-10">No one is currently being served.</p>
             ) : (
               <div className="flex flex-wrap gap-4 relative z-10">
-                {[...servingTokens, ...calledTokens].map((t) => (
-                  <div key={t.id} className="flex items-center gap-4 bg-surface-primary/60 border border-white/5 rounded-2xl px-5 py-4">
-                    <p className="text-4xl sm:text-5xl font-display font-black text-white leading-none">#{t.token_number}</p>
-                    <div>
-                      <TokenBadge status={t.status} />
-                      {t.workers?.name && (
-                        <p className="text-xs font-medium text-dark-200 mt-2">with <span className="text-white">{t.workers.name}</span></p>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                <AnimatePresence>
+                  {[...servingTokens, ...calledTokens].map((t) => (
+                    <motion.div
+                      key={t.id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.9, y: -10 }}
+                      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+                      className="flex items-center gap-4 bg-surface-primary/60 border border-white/5 rounded-2xl px-5 py-4 backdrop-blur-md"
+                    >
+                      <p className="text-4xl sm:text-5xl font-display font-black text-white leading-none">#{t.token_number}</p>
+                      <div>
+                        <TokenBadge status={t.status} />
+                        {t.workers?.name && (
+                          <p className="text-xs font-medium text-dark-200 mt-2">with <span className="text-white">{t.workers.name}</span></p>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
               </div>
             )}
           </div>
@@ -67,14 +78,25 @@ export default function LiveQueue() {
               <p className="text-dark-100 text-sm">Queue is empty — no wait time!</p>
             ) : (
               <div className="flex flex-wrap gap-3">
-                {waitingTokens.map((t, i) => (
-                  <div key={t.id} className="flex flex-col items-center gap-1.5">
-                    <div className="w-14 h-14 rounded-2xl bg-surface-primary border border-white/[0.06] flex items-center justify-center shadow-sm">
-                      <span className="font-display font-bold text-white text-lg leading-none">#{t.token_number}</span>
-                    </div>
-                    <span className="text-[10px] font-semibold text-dark-300 uppercase tracking-wider">#{i + 1}</span>
-                  </div>
-                ))}
+                <AnimatePresence>
+                  {waitingTokens.map((t, i) => (
+                    <motion.div
+                      key={t.id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.5 }}
+                      transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+                      className="flex flex-col items-center gap-1.5"
+                    >
+                      <div className="w-14 h-14 rounded-2xl bg-surface-primary border border-white/[0.06] flex items-center justify-center shadow-sm relative overflow-hidden group">
+                        <div className="absolute inset-0 bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <span className="font-display font-bold text-white text-lg leading-none">#{t.token_number}</span>
+                      </div>
+                      <span className="text-[10px] font-semibold text-dark-300 uppercase tracking-wider">#{i + 1}</span>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
               </div>
             )}
           </div>
