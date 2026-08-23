@@ -71,3 +71,8 @@ DROP POLICY IF EXISTS "Super admins view all payment transactions" ON payment_tr
 -- Super admins can view all payment transactions.
 CREATE POLICY "Super admins view all payment transactions" ON payment_transactions 
     FOR ALL USING (auth.uid() IN (SELECT id FROM profiles WHERE role = 'super_admin'));
+
+-- 6. Update seed plans with provider plan ids
+UPDATE subscription_plans SET provider_plan_id = 'plan_TTIpSGHiKyQJSl' WHERE id = 'ecae2ad8-8472-4569-a7b7-83912f01eee3';
+UPDATE subscription_plans SET provider_plan_id = 'plan_TTHZTDS4hXSLg3' WHERE id = '81cbc565-4c5a-4e3f-b032-a23d17449098';
+UPDATE subscription_plans SET provider_plan_id = 'plan_TTHadpOacwfqn9' WHERE id = 'fe0781a8-e496-4406-9821-a4da4d65f776';
