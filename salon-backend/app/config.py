@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     # Comma-separated allowed frontend origins, e.g. "http://localhost:5173,https://queuecut.com"
     # Set FRONTEND_URL in .env to restrict CORS in production.
     # If left blank, defaults to localhost dev origins only.
-    frontend_url: str = "http://localhost:5173,http://localhost:3000"
+    frontend_url: str = "http://localhost:5173,https://saloon-website-ashen.vercel.app"
 
     @property
     def allowed_origins(self) -> List[str]:
