@@ -102,7 +102,9 @@ export default function Login() {
                   onClick={async () => {
                     if (!form.email) { showError('Enter your email first'); return }
                     try {
-                      await supabase.auth.resetPasswordForEmail(form.email)
+                      await supabase.auth.resetPasswordForEmail(form.email, {
+                        redirectTo: `${window.location.origin}/reset-password`,
+                      })
                       success('Reset link sent!', 'Check your email for the password reset link')
                     } catch { showError('Could not send reset email') }
                   }}

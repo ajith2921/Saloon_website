@@ -11,6 +11,7 @@ import SuperAdminLayout from '../layouts/SuperAdminLayout'
 // Auth pages — small, eagerly loaded (hit on every cold start)
 import Login    from '../pages/auth/Login'
 import Register from '../pages/auth/Register'
+import ResetPassword from '../pages/auth/ResetPassword'
 
 // ─── Customer pages ───────────────────────────────────────────────────────────
 // Home, FindSalons, SalonDetails are the most commonly visited on cold start.
@@ -69,6 +70,7 @@ export default function AppRouter() {
       {/* ─── Auth ─── */}
       <Route path="/login"    element={<GuestRoute><Login /></GuestRoute>} />
       <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* ─── Customer (public + auth) ─── */}
       <Route element={<CustomerLayout />}>
