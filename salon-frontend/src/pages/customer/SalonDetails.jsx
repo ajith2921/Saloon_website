@@ -61,8 +61,34 @@ export default function SalonDetails() {
     </div>
   )
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    "name": salon.name,
+    "image": salon.cover_image_url || salon.logo_url || "",
+    "telephone": salon.phone || "",
+    "email": salon.email || "",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": salon.address || "",
+      "addressLocality": salon.city || ""
+    },
+    "aggregateRating": salon.review_count > 0 ? {
+      "@type": "AggregateRating",
+      "ratingValue": salon.avg_rating,
+      "reviewCount": salon.review_count
+    } : undefined,
+    "openingHoursSpecification": {
+      "@type": "OpeningHoursSpecification",
+      "opens": salon.opening_time || "09:00",
+      "closes": salon.closing_time || "21:00",
+      "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    }
+  }
+
   return (
     <div className="min-h-screen">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       {/* Cover */}
       <div className="h-56 sm:h-72 bg-surface-tertiary relative overflow-hidden">
         {salon.cover_image_url ? (

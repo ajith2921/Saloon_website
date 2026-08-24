@@ -99,6 +99,9 @@ export default {
           '0%':   { opacity: '0', transform: 'scale(0.7)' },
           '100%': { opacity: '1', transform: 'scale(1)' },
         },
+        shimmer: {
+          '100%': { transform: 'translateX(100%)' },
+        },
       },
     },
   },

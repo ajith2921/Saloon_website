@@ -298,9 +298,11 @@ function clsx(...args) {
 export function Skeleton({ className = '' }) {
   return (
     <div
-      className={`animate-pulse bg-white/5 rounded-xl ${className}`}
+      className={`relative overflow-hidden bg-white/5 rounded-xl ${className}`}
       aria-hidden="true"
-    />
+    >
+      <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+    </div>
   )
 }
 

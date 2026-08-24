@@ -3,7 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from .routers import tokens, ratings, analytics, revenue, super_admin, advertisements, loyalty, salons, services, workers, notifications, subscriptions, billing, webhooks
 from .config import settings
 
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from .limiter import limiter
+
 app = FastAPI(title="Men's Salon Queue API", version="1.0.0")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Allow frontend to access API
 app.add_middleware(

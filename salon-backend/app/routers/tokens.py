@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from datetime import date, datetime, timezone
 
 # pyrefly: ignore [missing-import]
@@ -8,12 +8,14 @@ from ..schemas.schemas import TokenCreate
 from ..dependencies import get_current_user, get_current_user_with_profile, require_salon_access
 # pyrefly: ignore [missing-import]
 from ..database import supabase_admin
+from ..limiter import limiter
 
 router = APIRouter(prefix="/api/tokens", tags=["Tokens"])
 
 
 @router.post("")
-def create_token(token: TokenCreate, user: dict = Depends(get_current_user_with_profile)):
+@limiter.limit("3/minute")
+def create_token(request: Request, token: TokenCreate, user: dict = Depends(get_current_user_with_profile)):
     user_id = user.get("sub")
     if not user_id:
         raise HTTPException(status_code=401, detail="User ID not found in token")

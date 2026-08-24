@@ -39,3 +39,7 @@ uvicorn==0.39.0
 websockets==15.0.1
 yarl==1.22.0
 razorpay==2.0.1
+slowapi==0.1.10
+limits==4.2
+pytest>=8.0.0
+pytest-asyncio>=0.23.0

@@ -1,12 +1,12 @@
-import { useEffect } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useMemo } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { supabase } from '../lib/supabase'
 import api from '../lib/api'
 
 const PUBLIC_QUEUE_REFRESH_MS = 10_000
 const PRIVATE_TOKEN_REFRESH_MS = 8_000
 
 export function useRealtimeQueue(salonId, onTokenChange, adminMode = false) {
-  const queryClient = useQueryClient()
   const endpoint = adminMode
     ? `/api/salons/${salonId}/queue/admin`
     : `/api/salons/${salonId}/queue/live`
@@ -22,13 +22,33 @@ export function useRealtimeQueue(salonId, onTokenChange, adminMode = false) {
     staleTime: 5000,
   })
 
-  const tokens = data ?? []
+  // Memoize tokens to prevent infinite loops in consumers
+  const tokens = useMemo(() => data ?? [], [data])
 
   useEffect(() => {
     if (tokens.length > 0) {
       onTokenChange?.(tokens)
     }
   }, [tokens, onTokenChange])
+
+  useEffect(() => {
+    if (!salonId) return
+
+    const channel = supabase.channel(`queue:${salonId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'tokens',
+        filter: `salon_id=eq.${salonId}`
+      }, () => {
+        refetch()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [salonId, refetch])
 
   const activeTokens  = tokens.filter((t) => ['waiting', 'called', 'serving'].includes(t.status))
   const currentToken  = tokens.find((t) => t.status === 'serving') ?? tokens.find((t) => t.status === 'called')
@@ -38,7 +58,7 @@ export function useRealtimeQueue(salonId, onTokenChange, adminMode = false) {
 }
 
 export function useRealtimeToken(tokenId, onStatusChange) {
-  const { data: tokenData, isLoading, refetch } = useQuery({
+  const { data: tokenData, refetch } = useQuery({
     queryKey: ['/api/tokens', tokenId],
     queryFn: async () => {
       const { data } = await api.get(`/api/tokens/${tokenId}`)
