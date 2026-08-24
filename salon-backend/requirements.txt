@@ -17,7 +17,7 @@ httpx==0.28.1
 hyperframe==6.1.0
 idna==3.18
 multidict==6.7.1
-packaging==26.3
+packaging<25,>=21
 postgrest==2.31.0
 propcache==0.4.1
 pycparser==2.23
