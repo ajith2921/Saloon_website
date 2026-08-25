@@ -23,7 +23,13 @@ class Settings(BaseSettings):
 
     @property
     def allowed_origins(self) -> List[str]:
-        return [origin.strip() for origin in self.frontend_url.split(",") if origin.strip()]
+        origins = [origin.strip() for origin in self.frontend_url.split(",") if origin.strip()]
+        if "https://saloon-website-ashen.vercel.app" not in origins:
+            origins.append("https://saloon-website-ashen.vercel.app")
+        # Also allow local dev
+        if "http://localhost:5173" not in origins:
+            origins.append("http://localhost:5173")
+        return origins
 
     class Config:
         env_file = ".env"
