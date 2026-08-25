@@ -153,5 +153,10 @@ def delete_worker(
 
     require_salon_access(user, existing.data[0]["salon_id"], {"salon_owner"})
 
+    # Check for active tokens
+    active_tokens = supabase_admin.table("tokens").select("id").eq("worker_id", worker_id).in_("status", ["waiting", "called", "serving"]).execute()
+    if active_tokens.data:
+        raise HTTPException(status_code=400, detail="This worker has active queue tokens and cannot be deleted.")
+
     supabase_admin.table("workers").delete().eq("id", worker_id).execute()
     return {"success": True, "deleted_id": worker_id}

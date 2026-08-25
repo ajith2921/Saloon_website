@@ -3,6 +3,7 @@ import { Plus, Edit2, Trash2, Scissors, Star } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useSalonWorkers } from '../../hooks/useApi'
 import { Modal, ConfirmModal, PageHeader, Card, Button, Input, Select, EmptyState, Skeleton } from '../../components/ui'
+import NoSalonEmptyState from '../../components/ui/NoSalonEmptyState'
 import api from '../../lib/api'
 import { useToast } from '../../context/ToastContext'
 
@@ -21,6 +22,8 @@ export default function Workers() {
   const workers = data?.workers ?? []
 
   const { success, error: showError } = useToast()
+  
+  if (!salonId && !loading) return <NoSalonEmptyState />
   const [modalOpen, setModalOpen] = useState(false)
   const [editing, setEditing]     = useState(null)   // null = adding new
   const [form, setForm]           = useState(EMPTY_FORM)

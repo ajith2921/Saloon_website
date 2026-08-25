@@ -3,6 +3,7 @@ import { TrendingUp, Users, Clock, CheckCircle } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useFetch } from '../../hooks/useApi'
 import { StatCard, Spinner } from '../../components/ui'
+import NoSalonEmptyState from '../../components/ui/NoSalonEmptyState'
 
 export default function Analytics() {
   const { profile } = useAuth()
@@ -10,6 +11,7 @@ export default function Analytics() {
 
   const { data, loading } = useFetch(salonId ? `/api/analytics/salon/${salonId}/summary` : null)
   
+  if (!salonId && !loading) return <NoSalonEmptyState />
   if (loading) return <div className="flex justify-center py-20"><Spinner size="lg" /></div>
 
   const chartData = data?.chart_data ?? []

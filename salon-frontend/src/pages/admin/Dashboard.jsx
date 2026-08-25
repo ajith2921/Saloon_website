@@ -2,6 +2,7 @@ import { Users, Ticket, CheckCircle, TrendingUp, AlertTriangle, RefreshCw } from
 import { useAuth } from '../../context/AuthContext'
 import { useSalonStats } from '../../hooks/useApi'
 import { StatCard, PageHeader, Card, Button, Skeleton } from '../../components/ui'
+import NoSalonEmptyState from '../../components/ui/NoSalonEmptyState'
 
 export default function Dashboard() {
   const { profile } = useAuth()
@@ -10,6 +11,8 @@ export default function Dashboard() {
   const salonId = profile?.db_salon_id ?? profile?.salons?.[0]?.id
 
   const { data: stats, loading, refetch } = useSalonStats(salonId)
+
+  if (!salonId && !loading) return <NoSalonEmptyState />
 
   return (
     <div className="max-w-5xl mx-auto">

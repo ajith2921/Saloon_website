@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { Play, Check, SkipForward, RefreshCw, Volume2 } from 'lucide-react'
+import { Plus, Play, Check, SkipForward, RefreshCw, Volume2, UserPlus, UserCog } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../../context/AuthContext'
 import { useRealtimeQueue } from '../../hooks/useRealtime'
+import { useSalonServices, useSalonWorkers } from '../../hooks/useApi'
 import { useToast } from '../../context/ToastContext'
-import { TokenBadge, PageHeader, Card, Button, Skeleton } from '../../components/ui'
+import { TokenBadge, PageHeader, Card, Button, Skeleton, Modal, Input, Select } from '../../components/ui'
+import NoSalonEmptyState from '../../components/ui/NoSalonEmptyState'
 import api from '../../lib/api'
 
 export default function QueueManagement() {
@@ -15,6 +17,19 @@ export default function QueueManagement() {
   const { tokens, activeTokens, waitingTokens, loading, refetch } = useRealtimeQueue(salonId, undefined, true)
   const { success, error: showError } = useToast()
   const [actionLoading, setActionLoading] = useState(null)
+
+  const { data: servicesData } = useSalonServices(salonId)
+  const { data: workersData } = useSalonWorkers(salonId)
+  
+  const services = servicesData?.services ?? []
+  const workers = workersData?.workers ?? []
+
+  const [walkInModalOpen, setWalkInModalOpen] = useState(false)
+  const [reassignModalOpen, setReassignModalOpen] = useState(false)
+  const [targetToken, setTargetToken] = useState(null)
+  
+  const [walkInForm, setWalkInForm] = useState({ guest_name: '', service_id: '', worker_id: '' })
+  const [reassignWorkerId, setReassignWorkerId] = useState('')
 
   const updateStatus = async (tokenId, action) => {
     setActionLoading(tokenId)
@@ -27,6 +42,40 @@ export default function QueueManagement() {
       setActionLoading(null)
     }
   }
+
+  const handleWalkInSubmit = async (e) => {
+    e.preventDefault()
+    if (!walkInForm.guest_name || !walkInForm.service_id) return showError("Name and service are required")
+    try {
+      await api.post('/api/tokens', {
+        salon_id: salonId,
+        guest_name: walkInForm.guest_name,
+        service_id: walkInForm.service_id,
+        worker_id: walkInForm.worker_id || null
+      })
+      success("Walk-in token added")
+      setWalkInModalOpen(false)
+      setWalkInForm({ guest_name: '', service_id: '', worker_id: '' })
+    } catch (err) {
+      showError(err.message || "Failed to create walk-in token")
+    }
+  }
+
+  const handleReassignSubmit = async (e) => {
+    e.preventDefault()
+    try {
+      await api.put(`/api/tokens/${targetToken.id}/reassign`, {
+        worker_id: reassignWorkerId || null
+      })
+      success("Token reassigned successfully")
+      setReassignModalOpen(false)
+      setTargetToken(null)
+    } catch (err) {
+      showError(err.message || "Failed to reassign token")
+    }
+  }
+
+  if (!salonId && !loading) return <NoSalonEmptyState />
 
   if (loading) return (
     <div className="max-w-5xl mx-auto">
@@ -52,9 +101,14 @@ export default function QueueManagement() {
         title="Live Queue Management"
         description="Control token flow and assignments"
         action={
-          <Button variant="icon" onClick={refetch} aria-label="Refresh Queue" title="Refresh Queue">
-            <RefreshCw className="w-5 h-5" />
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => setWalkInModalOpen(true)}>
+              <UserPlus className="w-4 h-4 mr-2" /> Add Walk-in
+            </Button>
+            <Button variant="icon" onClick={refetch} aria-label="Refresh Queue" title="Refresh Queue">
+              <RefreshCw className="w-5 h-5" />
+            </Button>
+          </div>
         }
       />
 
@@ -87,10 +141,18 @@ export default function QueueManagement() {
                       </div>
                       
                       <div className="flex-1 min-w-0 text-center sm:text-left">
-                        <p className="font-semibold text-white">{t.profiles?.full_name ?? 'Walk-in Customer'}</p>
+                        <p className="font-semibold text-white">{t.guest_name || t.profiles?.full_name || 'Walk-in Customer'}</p>
                         <p className="text-sm text-dark-100">{t.services?.name} · {t.services?.duration_minutes}m</p>
-                        <p className="text-xs text-dark-200 mt-1">
-                          Assigned to: <span className="text-white font-medium">{t.workers?.name ?? 'Any'}</span>
+                        <p className="text-xs text-dark-200 mt-1 flex items-center justify-center sm:justify-start gap-2">
+                          <span>Assigned to: <span className="text-white font-medium">{t.workers?.name ?? 'Any'}</span></span>
+                          {(t.status === 'waiting' || t.status === 'called') && (
+                            <button 
+                              onClick={() => { setTargetToken(t); setReassignWorkerId(t.worker_id || ''); setReassignModalOpen(true); }}
+                              className="text-[10px] bg-white/5 hover:bg-white/10 text-brand-400 px-2 py-0.5 rounded flex items-center gap-1 transition-colors"
+                            >
+                              <UserCog className="w-3 h-3" /> Reassign
+                            </button>
+                          )}
                         </p>
                       </div>
 
@@ -151,7 +213,7 @@ export default function QueueManagement() {
                   {tokens.filter(t => ['completed', 'skipped', 'cancelled'].includes(t.status)).reverse().slice(0, 5).map(t => (
                     <tr key={t.id} className="text-dark-100">
                       <td className="py-3 font-medium text-white">#{t.token_number}</td>
-                      <td className="py-3">{t.profiles?.full_name ?? '—'}</td>
+                      <td className="py-3">{t.guest_name || t.profiles?.full_name || '—'}</td>
                       <td className="py-3">{t.services?.name ?? '—'}</td>
                       <td className="py-3">{t.workers?.name ?? '—'}</td>
                       <td className="py-3"><TokenBadge status={t.status} /></td>
@@ -200,7 +262,7 @@ export default function QueueManagement() {
                       {t.token_number}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{t.profiles?.full_name ?? 'Walk-in'}</p>
+                      <p className="text-sm font-medium text-white truncate">{t.guest_name || t.profiles?.full_name || 'Walk-in'}</p>
                       <p className="text-xs text-dark-200 truncate">{t.services?.name}</p>
                     </div>
                     <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -222,6 +284,73 @@ export default function QueueManagement() {
           </div>
         </Card>
       </div>
+
+      {/* Add Walk-in Modal */}
+      <Modal 
+        isOpen={walkInModalOpen} 
+        onClose={() => setWalkInModalOpen(false)} 
+        title="Add Walk-in Token"
+      >
+        <form onSubmit={handleWalkInSubmit} className="space-y-4">
+          <Input 
+            label="Guest Name"
+            value={walkInForm.guest_name}
+            onChange={(e) => setWalkInForm({ ...walkInForm, guest_name: e.target.value })}
+            placeholder="E.g., John Doe"
+            required 
+          />
+          <Select
+            label="Service"
+            value={walkInForm.service_id}
+            onChange={(e) => setWalkInForm({ ...walkInForm, service_id: e.target.value })}
+            options={[
+              { value: '', label: 'Select a Service' },
+              ...services.map(s => ({ value: s.id, label: s.name }))
+            ]}
+            required
+          />
+          <Select
+            label="Preferred Barber (Optional)"
+            value={walkInForm.worker_id}
+            onChange={(e) => setWalkInForm({ ...walkInForm, worker_id: e.target.value })}
+            options={[
+              { value: '', label: 'Any Available' },
+              ...workers.map(w => ({ value: w.id, label: w.name }))
+            ]}
+          />
+          <div className="flex justify-end gap-3 pt-4 border-t border-white/10 mt-6">
+            <Button type="button" variant="ghost" onClick={() => setWalkInModalOpen(false)}>Cancel</Button>
+            <Button type="submit">Add Walk-in</Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Reassign Modal */}
+      <Modal 
+        isOpen={reassignModalOpen} 
+        onClose={() => setReassignModalOpen(false)} 
+        title="Reassign Token"
+      >
+        <form onSubmit={handleReassignSubmit} className="space-y-4">
+          <div className="bg-surface-tertiary p-3 rounded-lg border border-white/5 mb-4">
+            <p className="text-sm text-white">Token: <span className="font-bold">#{targetToken?.token_number}</span></p>
+            <p className="text-sm text-dark-100">Customer: {targetToken?.guest_name || targetToken?.profiles?.full_name || 'Walk-in'}</p>
+          </div>
+          <Select
+            label="Assign To"
+            value={reassignWorkerId}
+            onChange={(e) => setReassignWorkerId(e.target.value)}
+            options={[
+              { value: '', label: 'Any Available' },
+              ...workers.map(w => ({ value: w.id, label: w.name }))
+            ]}
+          />
+          <div className="flex justify-end gap-3 pt-4 border-t border-white/10 mt-6">
+            <Button type="button" variant="ghost" onClick={() => setReassignModalOpen(false)}>Cancel</Button>
+            <Button type="submit">Reassign</Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   )
 }

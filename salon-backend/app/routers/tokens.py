@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request
 from datetime import date, datetime, timezone
 
 # pyrefly: ignore [missing-import]
-from ..schemas.schemas import TokenCreate
+from ..schemas.schemas import TokenCreate, TokenReassign
 # pyrefly: ignore [missing-import]
 from ..dependencies import get_current_user, get_current_user_with_profile, require_salon_access
 # pyrefly: ignore [missing-import]
@@ -20,15 +20,31 @@ def create_token(request: Request, token: TokenCreate, user: dict = Depends(get_
     if not user_id:
         raise HTTPException(status_code=401, detail="User ID not found in token")
 
-    if user.get("db_role") != "customer":
-        raise HTTPException(status_code=403, detail="Only customer accounts can create tokens")
+    db_role = user.get("db_role")
+    
+    if db_role == "customer":
+        # Customers can only create tokens for themselves, not walk-ins
+        if token.guest_name is not None:
+            raise HTTPException(status_code=400, detail="Customers cannot create walk-in tokens")
+        customer_id = user_id
+        guest_name = None
+    elif db_role in ("salon_owner", "worker"):
+        # Staff can only create walk-in tokens, not tokens linked to a customer account directly
+        if not token.guest_name:
+            raise HTTPException(status_code=400, detail="Guest name is required for walk-in tokens")
+        require_salon_access(user, str(token.salon_id), {"salon_owner", "worker"})
+        customer_id = None
+        guest_name = token.guest_name
+    else:
+        raise HTTPException(status_code=403, detail="Insufficient permissions to create tokens")
 
     try:
         res = supabase_admin.rpc("create_queue_token", {
             "p_salon_id": str(token.salon_id),
-            "p_customer_id": user_id,
+            "p_customer_id": customer_id,
             "p_service_id": str(token.service_id),
             "p_worker_id": str(token.worker_id) if token.worker_id else None,
+            "p_guest_name": guest_name,
         }).execute()
         if not res.data:
             raise HTTPException(status_code=500, detail="Failed to generate token. Please try again.")
@@ -216,3 +232,38 @@ def update_token_status(token_id: UUID, action: str, user: dict = Depends(get_cu
             pass  # Loyalty award is best-effort; don't fail the main operation
 
     return updated_token
+
+
+@router.put("/{token_id}/reassign")
+def reassign_token(token_id: UUID, payload: TokenReassign, user: dict = Depends(get_current_user_with_profile)):
+    db_role = user.get("db_role")
+    
+    if db_role not in ("salon_owner", "worker"):
+        raise HTTPException(status_code=403, detail="Only salon staff can reassign tokens")
+
+    # Fetch token
+    token_res = supabase_admin.table("tokens").select("salon_id, status").eq("id", token_id).execute()
+    if not token_res.data:
+        raise HTTPException(status_code=404, detail="Token not found")
+        
+    t = token_res.data[0]
+    
+    # Require access to this salon
+    require_salon_access(user, t["salon_id"], {"salon_owner", "worker"})
+    
+    # Can only reassign tokens that are waiting or called (not serving or completed)
+    if t["status"] not in ("waiting", "called"):
+        raise HTTPException(status_code=400, detail="Can only reassign tokens that are waiting or called")
+        
+    # Verify the new worker belongs to the same salon
+    if payload.worker_id is not None:
+        worker_res = supabase_admin.table("workers").select("id").eq("id", payload.worker_id).eq("salon_id", t["salon_id"]).eq("status", "active").execute()
+        if not worker_res.data:
+            raise HTTPException(status_code=400, detail="Worker not found or not active at this salon")
+            
+    res = supabase_admin.table("tokens").update({"worker_id": str(payload.worker_id) if payload.worker_id else None}).eq("id", token_id).execute()
+    
+    if not res.data:
+        raise HTTPException(status_code=500, detail="Failed to reassign token")
+        
+    return res.data[0]

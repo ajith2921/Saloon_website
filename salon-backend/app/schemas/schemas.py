@@ -7,6 +7,11 @@ class TokenCreate(BaseModel):
     salon_id: UUID
     service_id: UUID
     worker_id: Optional[UUID] = None
+    guest_name: Optional[str] = None
+
+
+class TokenReassign(BaseModel):
+    worker_id: Optional[UUID] = None
 
 
 class RatingCreate(BaseModel):
