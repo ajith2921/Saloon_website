@@ -44,10 +44,9 @@ def get_live_queue(salon_id: UUID):
     customers viewing queue position) must never receive another customer's identity.
     See /queue/admin for the authenticated owner/worker view with customer names.
     """
-    today = str(date.today())
     res = supabase_admin.table("tokens").select(
         "id, token_number, status, service_id, worker_id, services(name, duration_minutes), workers(name, photo_url)"
-    ).eq("salon_id", salon_id).eq("date", today).in_("status", ["waiting", "called", "serving"]).order("token_number").execute()
+    ).eq("salon_id", salon_id).in_("status", ["waiting", "called", "serving"]).order("token_number").execute()
     return {"tokens": res.data}
 
 
