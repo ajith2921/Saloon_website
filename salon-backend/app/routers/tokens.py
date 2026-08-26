@@ -121,7 +121,8 @@ def get_single_token(token_id: UUID, user: dict = Depends(get_current_user_with_
 
 
 @router.put("/{token_id}/{action}")
-def update_token_status(token_id: UUID, action: str, user: dict = Depends(get_current_user_with_profile)):
+@limiter.limit("30/minute")
+def update_token_status(request: Request, token_id: UUID, action: str, user: dict = Depends(get_current_user_with_profile)):
     valid_actions = {
         "call":     "called",
         "start":    "serving",
@@ -207,7 +208,8 @@ def update_token_status(token_id: UUID, action: str, user: dict = Depends(get_cu
 
 
 @router.put("/{token_id}/reassign")
-def reassign_token(token_id: UUID, payload: TokenReassign, user: dict = Depends(get_current_user_with_profile)):
+@limiter.limit("20/minute")
+def reassign_token(request: Request, token_id: UUID, payload: TokenReassign, user: dict = Depends(get_current_user_with_profile)):
     db_role = user.get("db_role")
     
     if db_role not in ("salon_owner", "worker"):

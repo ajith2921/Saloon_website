@@ -3,6 +3,7 @@ from app.database import supabase_admin
 from app.config import settings
 import razorpay
 import logging
+import json
 from typing import Dict, Any
 from uuid import UUID
 
@@ -42,8 +43,8 @@ async def razorpay_webhook(request: Request):
         logger.error(f"Webhook error: {e}")
         raise HTTPException(status_code=400, detail="Bad request")
 
-    # Parse JSON AFTER verification
-    data = await request.json()
+    # Parse JSON from bytes after verification
+    data = json.loads(payload)
     event_id = data.get("event_id", data.get("id")) # Razorpay webhooks send an event ID
     event_type = data.get("event")
 

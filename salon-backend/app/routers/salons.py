@@ -1,13 +1,38 @@
 from uuid import UUID
 from fastapi import APIRouter, HTTPException, Depends, Query, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional
 from datetime import date
+import re
 
 from ..limiter import limiter
-
 from ..database import supabase_admin
 from ..dependencies import get_current_user_with_profile, require_salon_access, get_current_user
+
+# Reuse the same private-IP validation pattern from schemas
+_PRIVATE_IP_RE = re.compile(
+    r'^(localhost|127\.\d+\.\d+\.\d+|::1'
+    r'|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+'
+    r'|192\.168\.\d+\.\d+|169\.254\.\d+\.\d+'
+    r'|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+)'
+)
+
+def _validate_public_url(v: Optional[str]) -> Optional[str]:
+    """Validate that URLs for logos/covers use safe protocols."""
+    if v is None:
+        return v
+    v = v.strip()
+    if not v.startswith(('https://', 'http://')):
+        raise ValueError('URL must use http or https')
+    try:
+        host = v.split('/')[2].split(':')[0].lower()
+    except IndexError:
+        raise ValueError('Invalid URL format')
+    if _PRIVATE_IP_RE.match(host):
+        raise ValueError('URL may not point to a private or loopback address')
+    if len(v) > 2048:
+        raise ValueError('URL exceeds maximum length')
+    return v
 
 router = APIRouter(prefix="/api/salons", tags=["Salons"])
 
@@ -112,7 +137,8 @@ def get_my_salon(user: dict = Depends(get_current_user_with_profile)):
 
 @router.get("/{salon_id}")
 def get_salon_by_id(salon_id: UUID):
-    res = supabase_admin.table("salons").select("*, profiles!owner_id(full_name)").eq("id", salon_id).execute()
+    """Returns public salon details. Only exposes active salons to anonymous callers."""
+    res = supabase_admin.table("salons").select("*, profiles!owner_id(full_name)").eq("id", salon_id).eq("status", "active").execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Salon not found")
     return res.data[0]
@@ -135,9 +161,15 @@ class SalonUpdate(BaseModel):
     longitude: Optional[float] = None
     timezone: Optional[str] = None  # IANA timezone name e.g. 'Asia/Kolkata'
 
+    @field_validator('logo_url', 'cover_image_url')
+    @classmethod
+    def validate_image_urls(cls, v):
+        return _validate_public_url(v)
+
 
 @router.put("/{salon_id}")
-def update_salon(salon_id: UUID, updates: SalonUpdate, user: dict = Depends(get_current_user_with_profile)):
+@limiter.limit("20/minute")
+def update_salon(request: Request, salon_id: UUID, updates: SalonUpdate, user: dict = Depends(get_current_user_with_profile)):
     """Update salon settings. Only the salon owner (or super_admin) can update."""
     require_salon_access(user, salon_id, {"salon_owner"})
 

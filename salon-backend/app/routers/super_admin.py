@@ -1,5 +1,6 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
+from typing import Optional
 from ..dependencies import require_role
 from ..database import supabase_admin
 from ..limiter import limiter
@@ -11,7 +12,8 @@ router = APIRouter(prefix="/api/super-admin", tags=["Super Admin"])
 
 
 @router.get("/stats")
-def get_platform_stats(user: dict = Depends(require_role("super_admin"))):
+@limiter.limit("30/minute")
+def get_platform_stats(request: Request, user: dict = Depends(require_role("super_admin"))):
     """Real platform-wide aggregate stats from the DB."""
 
     # All salons breakdown
@@ -82,7 +84,8 @@ def _enrich_with_owner_emails(salons: list) -> list:
 
 
 @router.get("/salons")
-def get_all_salons(user: dict = Depends(require_role("super_admin"))):
+@limiter.limit("30/minute")
+def get_all_salons(request: Request, user: dict = Depends(require_role("super_admin"))):
     res = supabase_admin.table("salons") \
         .select("*, profiles!owner_id(full_name)") \
         .order("created_at", desc=True) \
@@ -92,7 +95,8 @@ def get_all_salons(user: dict = Depends(require_role("super_admin"))):
 
 
 @router.get("/salons/pending")
-def get_pending_salons(user: dict = Depends(require_role("super_admin"))):
+@limiter.limit("30/minute")
+def get_pending_salons(request: Request, user: dict = Depends(require_role("super_admin"))):
     """Returns only pending salons for the dashboard approval widget."""
     res = supabase_admin.table("salons") \
         .select("id, name, city, created_at, owner_id, profiles!owner_id(full_name)") \
@@ -128,3 +132,54 @@ def suspend_salon(request: Request, salon_id: UUID, user: dict = Depends(require
         "actor_id": actor_id, "action": "SUSPEND_SALON", "target_id": str(salon_id), "target_type": "salon"
     }).execute()
     return {"status": "success", "salon": res.data[0]}
+
+
+@router.post("/salons/{salon_id}/reactivate")
+@limiter.limit("20/minute")
+def reactivate_salon(request: Request, salon_id: UUID, user: dict = Depends(require_role("super_admin"))):
+    """Reactivate a previously suspended salon."""
+    res = supabase_admin.table("salons").update({"status": "active"}).eq("id", salon_id).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Salon not found")
+    actor_id = user.get("sub")
+    supabase_admin.table("super_admin_audit_logs").insert({
+        "actor_id": actor_id, "action": "REACTIVATE_SALON", "target_id": str(salon_id), "target_type": "salon"
+    }).execute()
+    return {"status": "success", "salon": res.data[0]}
+
+
+@router.get("/audit-logs")
+@limiter.limit("30/minute")
+def get_audit_logs(
+    request: Request,
+    limit: int = Query(50, le=200),
+    offset: int = Query(0),
+    user: dict = Depends(require_role("super_admin")),
+):
+    """Returns immutable audit log of all Super Admin actions."""
+    res = supabase_admin.table("super_admin_audit_logs") \
+        .select("*, profiles!actor_id(full_name)") \
+        .order("created_at", desc=True) \
+        .range(offset, offset + limit - 1) \
+        .execute()
+    return {"logs": res.data or []}
+
+
+@router.get("/users")
+@limiter.limit("30/minute")
+def get_all_users(
+    request: Request,
+    role: Optional[str] = Query(None),
+    limit: int = Query(50, le=200),
+    offset: int = Query(0),
+    user: dict = Depends(require_role("super_admin")),
+):
+    """Returns platform users. Optionally filter by role. Never returns passwords or tokens."""
+    query = supabase_admin.table("profiles").select(
+        "id, full_name, phone, role, loyalty_points, created_at"
+    )
+    if role:
+        query = query.eq("role", role)
+    res = query.order("created_at", desc=True).range(offset, offset + limit - 1).execute()
+    return {"users": res.data or []}
+
