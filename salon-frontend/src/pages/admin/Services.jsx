@@ -23,12 +23,13 @@ export default function Services() {
 
   const { success, error: showError } = useToast()
   
-  if (!salonId && !loading) return <NoSalonEmptyState />
   const [modalOpen, setModalOpen]     = useState(false)
   const [editing, setEditing]         = useState(null)
   const [form, setForm]               = useState(EMPTY_FORM)
   const [saving, setSaving]           = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)
+
+  if (!salonId && !loading) return <NoSalonEmptyState />
 
   const handleOpen = (service = null) => {
     setEditing(service)
