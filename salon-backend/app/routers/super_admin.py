@@ -1,7 +1,11 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from ..dependencies import require_role
 from ..database import supabase_admin
+from ..limiter import limiter
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/super-admin", tags=["Super Admin"])
 
@@ -24,9 +28,9 @@ def get_platform_stats(user: dict = Depends(require_role("super_admin"))):
         .execute()
     total_customers = customers_res.count or 0
 
-    # Tokens issued today (all salons)
-    from datetime import date
-    today_str = str(date.today())
+    # Tokens issued today (all salons, UTC day boundary for global metrics)
+    from datetime import datetime, timezone
+    today_str = datetime.now(timezone.utc).date().isoformat()
     tokens_res = supabase_admin.table("tokens") \
         .select("id", count="exact") \
         .eq("date", today_str) \
@@ -101,16 +105,26 @@ def get_pending_salons(user: dict = Depends(require_role("super_admin"))):
 
 
 @router.post("/salons/{salon_id}/approve")
-def approve_salon(salon_id: UUID, user: dict = Depends(require_role("super_admin"))):
+@limiter.limit("20/minute")
+def approve_salon(request: Request, salon_id: UUID, user: dict = Depends(require_role("super_admin"))):
     res = supabase_admin.table("salons").update({"status": "active"}).eq("id", salon_id).execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Salon not found")
+    actor_id = user.get("sub")
+    supabase_admin.table("super_admin_audit_logs").insert({
+        "actor_id": actor_id, "action": "APPROVE_SALON", "target_id": str(salon_id), "target_type": "salon"
+    }).execute()
     return {"status": "success", "salon": res.data[0]}
 
 
 @router.post("/salons/{salon_id}/suspend")
-def suspend_salon(salon_id: UUID, user: dict = Depends(require_role("super_admin"))):
+@limiter.limit("20/minute")
+def suspend_salon(request: Request, salon_id: UUID, user: dict = Depends(require_role("super_admin"))):
     res = supabase_admin.table("salons").update({"status": "suspended"}).eq("id", salon_id).execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Salon not found")
+    actor_id = user.get("sub")
+    supabase_admin.table("super_admin_audit_logs").insert({
+        "actor_id": actor_id, "action": "SUSPEND_SALON", "target_id": str(salon_id), "target_type": "salon"
+    }).execute()
     return {"status": "success", "salon": res.data[0]}

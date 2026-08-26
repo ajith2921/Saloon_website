@@ -1,10 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from app.dependencies import get_current_user_with_profile, require_role
 from app.database import supabase_admin
 from app.schemas.schemas import BillingCheckoutRequest, BillingCheckoutResponse
 from app.config import settings
 import razorpay
 import logging
+from app.limiter import limiter
 
 router = APIRouter(prefix="/api/billing", tags=["billing"])
 logger = logging.getLogger(__name__)
@@ -16,7 +17,9 @@ def get_razorpay_client():
     return razorpay.Client(auth=(settings.razorpay_key_id, settings.razorpay_key_secret))
 
 @router.post("/checkout", response_model=BillingCheckoutResponse)
+@limiter.limit("3/minute")
 def create_checkout(
+    request: Request,
     payload: BillingCheckoutRequest,
     user: dict = Depends(require_role("salon_owner"))
 ):

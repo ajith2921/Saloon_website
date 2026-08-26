@@ -1,6 +1,32 @@
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 from typing import Optional, Literal
 from uuid import UUID
+import re
+
+# Allowlist of safe URL protocols. Reject localhost/private IP ranges.
+_PRIVATE_IP_RE = re.compile(
+    r'^(localhost|127\.\d+\.\d+\.\d+|::1'
+    r'|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+'
+    r'|192\.168\.\d+\.\d+|169\.254\.\d+\.\d+'
+    r'|100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\.\d+\.\d+)'
+)
+
+def _validate_photo_url(v: Optional[str]) -> Optional[str]:
+    if v is None:
+        return v
+    v = v.strip()
+    if not v.startswith('https://'):
+        raise ValueError('photo_url must use HTTPS')
+    # Extract host
+    try:
+        host = v.split('/')[2].split(':')[0].lower()
+    except IndexError:
+        raise ValueError('Invalid URL format')
+    if _PRIVATE_IP_RE.match(host):
+        raise ValueError('photo_url may not point to a private or loopback address')
+    if len(v) > 2048:
+        raise ValueError('photo_url exceeds maximum length')
+    return v
 
 
 class TokenCreate(BaseModel):
@@ -35,6 +61,11 @@ class WorkerCreate(BaseModel):
     status: Literal["active", "inactive", "on_break"] = "active"
     photo_url: Optional[str] = None
 
+    @field_validator('photo_url')
+    @classmethod
+    def validate_photo_url(cls, v):
+        return _validate_photo_url(v)
+
 
 class WorkerUpdate(BaseModel):
     user_id: Optional[UUID] = None
@@ -43,6 +74,11 @@ class WorkerUpdate(BaseModel):
     experience_years: Optional[int] = Field(None, ge=0, le=50)
     status: Optional[Literal["active", "inactive", "on_break"]] = None
     photo_url: Optional[str] = None
+
+    @field_validator('photo_url')
+    @classmethod
+    def validate_photo_url(cls, v):
+        return _validate_photo_url(v)
 
 
 # ── Service schemas ─────────────────────────────────────────────────────────

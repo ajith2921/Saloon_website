@@ -86,9 +86,14 @@ export default function SalonDetails() {
     }
   }
 
+  const safeJsonLd = JSON.stringify(jsonLd)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026');
+
   return (
     <div className="min-h-screen">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd }} />
       {/* Cover */}
       <div className="h-56 sm:h-72 bg-surface-tertiary relative overflow-hidden">
         {salon.cover_image_url ? (

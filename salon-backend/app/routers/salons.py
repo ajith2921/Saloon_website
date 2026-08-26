@@ -1,8 +1,10 @@
 from uuid import UUID
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from pydantic import BaseModel
 from typing import Optional
 from datetime import date
+
+from ..limiter import limiter
 
 from ..database import supabase_admin
 from ..dependencies import get_current_user_with_profile, require_salon_access, get_current_user
@@ -15,7 +17,8 @@ router = APIRouter(prefix="/api/salons", tags=["Salons"])
 # ──────────────────────────────────────────────────────────
 
 @router.get("")
-def get_salons(status: Optional[str] = Query(None), limit: Optional[int] = Query(50), offset: Optional[int] = Query(0)):
+@limiter.limit("60/minute")
+def get_salons(request: Request, status: Optional[str] = Query(None), limit: Optional[int] = Query(50, le=100), offset: Optional[int] = Query(0)):
     # Public discovery must never expose pending or suspended salons.
     query = supabase_admin.table("salons").select("*").eq("status", "active")
     res = query.range(offset, offset + limit - 1).execute()
@@ -64,7 +67,9 @@ def get_admin_live_queue(
     # Allow salon_owner and worker of this salon, plus super_admin.
     require_salon_access(user, salon_id, {"salon_owner", "worker"})
 
-    today = str(date.today())
+    # Use salon-local timezone rather than server UTC
+    tz_res = supabase_admin.rpc('get_business_today_for_salon', {'p_salon_id': str(salon_id)}).execute()
+    today = str(tz_res.data) if tz_res.data else str(date.today())
     res = supabase_admin.table("tokens").select(
         "id, token_number, status, service_id, worker_id, "
         "services(name, duration_minutes), workers(name, photo_url), "
@@ -128,6 +133,7 @@ class SalonUpdate(BaseModel):
     cover_image_url: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    timezone: Optional[str] = None  # IANA timezone name e.g. 'Asia/Kolkata'
 
 
 @router.put("/{salon_id}")

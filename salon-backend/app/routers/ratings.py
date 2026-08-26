@@ -1,5 +1,6 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
+from ..limiter import limiter
 
 from ..dependencies import get_current_user
 from ..database import supabase_admin
@@ -9,7 +10,8 @@ router = APIRouter(prefix="/api/ratings", tags=["Ratings"])
 
 
 @router.post("")
-def submit_rating(rating: RatingCreate, user: dict = Depends(get_current_user)):
+@limiter.limit("5/minute")
+def submit_rating(request: Request, rating: RatingCreate, user: dict = Depends(get_current_user)):
     user_id = user.get("sub")
     if not user_id:
         raise HTTPException(status_code=401, detail="Unauthorized")
