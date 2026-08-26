@@ -1,9 +1,10 @@
 from uuid import UUID
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from typing import Optional
 from ..database import supabase_admin
 from ..dependencies import require_role, require_salon_access, get_current_user_with_profile
 from ..schemas.schemas import ServiceCreate, ServiceUpdate
+from ..limiter import limiter
 
 router = APIRouter(prefix="/api/services", tags=["Services"])
 
@@ -47,7 +48,9 @@ def get_service(service_id: UUID):
 # ── Owner-only writes ───────────────────────────────────────────────────────
 
 @router.post("")
+@limiter.limit("20/minute")
 def create_service(
+    request: Request,
     service: ServiceCreate,
     user: dict = Depends(require_role("salon_owner|super_admin")),
 ):

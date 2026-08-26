@@ -7,7 +7,12 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from .limiter import limiter
 
-app = FastAPI(title="Men's Salon Queue API", version="1.0.0")
+app = FastAPI(
+    title="Men's Salon Queue API",
+    version="1.0.0",
+    docs_url=None,   # Disable Swagger UI in production
+    redoc_url=None,  # Disable ReDoc in production
+)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 

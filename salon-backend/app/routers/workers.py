@@ -1,9 +1,10 @@
 from uuid import UUID
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from typing import Optional
 from ..database import supabase_admin
 from ..dependencies import require_role, require_salon_access
 from ..schemas.schemas import WorkerCreate, WorkerUpdate
+from ..limiter import limiter
 
 router = APIRouter(prefix="/api/workers", tags=["Workers"])
 
@@ -51,7 +52,9 @@ def get_worker(worker_id: UUID):
 # ── Owner-only writes ───────────────────────────────────────────────────────
 
 @router.post("")
+@limiter.limit("20/minute")
 def create_worker(
+    request: Request,
     worker: WorkerCreate,
     user: dict = Depends(require_role("salon_owner|super_admin")),
 ):
