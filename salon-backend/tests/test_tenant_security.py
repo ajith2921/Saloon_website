@@ -408,7 +408,34 @@ class TestLegitimateOwnerAccess(unittest.TestCase):
     def test_owner_can_delete_own_worker(self, mock_db):
         """DELETE on a worker that belongs to SALON_A must succeed (200)."""
         chain = _chain(data=[{"salon_id": SALON_A}])
-        mock_db.table.return_value = chain
+        active_chain = _chain(data=[])
+
+        class MockTableChain:
+            def __init__(self, table_name):
+                self.table_name = table_name
+            def select(self, *args, **kwargs):
+                return self
+            def eq(self, *args, **kwargs):
+                return self
+            def in_(self, *args, **kwargs):
+                return self
+            def delete(self, *args, **kwargs):
+                return self
+            def execute(self):
+                if self.table_name == "tokens":
+                    result = MagicMock()
+                    result.data = []
+                    return result
+                elif self.table_name == "workers":
+                    result = MagicMock()
+                    result.data = [{"salon_id": SALON_A}]
+                    return result
+                return _chain(data=[{"salon_id": SALON_A}]).execute()
+
+        def _table_side_effect(name):
+            return MockTableChain(name)
+
+        mock_db.table.side_effect = _table_side_effect
 
         resp = self.client.delete(f"/api/workers/{WORKER_A}")
         self.assertEqual(resp.status_code, 200,

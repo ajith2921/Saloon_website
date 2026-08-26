@@ -140,7 +140,7 @@ class TestHistoryReadSecurity(unittest.TestCase):
     def test_history_without_auth_returns_401_or_403(self):
         """Unauthenticated access to /history must be rejected."""
         app.dependency_overrides = {}
-        client = TestClient(app, raise_server_exceptions=False)
+        client = TestClient(app)
         resp = client.get("/api/tokens/history")
         self.assertIn(resp.status_code, [401, 403])
 
@@ -150,7 +150,7 @@ class TestHistoryReadSecurity(unittest.TestCase):
         """GET /api/tokens/{id} — customer can view their own token."""
         app.dependency_overrides[get_current_user_with_profile] = lambda: _customer_a()
         mock_db.table.return_value = _chain([_TOKEN_A_WAITING])
-        client = TestClient(app, raise_server_exceptions=False)
+        client = TestClient(app)
         resp = client.get(f"/api/tokens/{TOKEN_A}")
         self.assertEqual(resp.status_code, 200)
 
@@ -161,7 +161,7 @@ class TestHistoryReadSecurity(unittest.TestCase):
         app.dependency_overrides[get_current_user_with_profile] = lambda: _customer_a()
         # Return a token that belongs to CUSTOMER_B
         mock_db.table.return_value = _chain([_TOKEN_B_WAITING])
-        client = TestClient(app, raise_server_exceptions=False)
+        client = TestClient(app)
         resp = client.get(f"/api/tokens/{TOKEN_B}")
         self.assertEqual(resp.status_code, 403,
                          f"Expected 403, got {resp.status_code}: {resp.text}")
@@ -172,7 +172,7 @@ class TestHistoryReadSecurity(unittest.TestCase):
         """Salon Owner A can view a token that belongs to SALON_A."""
         app.dependency_overrides[get_current_user_with_profile] = lambda: _owner_a()
         mock_db.table.return_value = _chain([_TOKEN_A_WAITING])
-        client = TestClient(app, raise_server_exceptions=False)
+        client = TestClient(app)
         resp = client.get(f"/api/tokens/{TOKEN_A}")
         self.assertEqual(resp.status_code, 200,
                          f"Expected 200, got {resp.status_code}: {resp.text}")
@@ -184,7 +184,7 @@ class TestHistoryReadSecurity(unittest.TestCase):
         app.dependency_overrides[get_current_user_with_profile] = lambda: _owner_a()
         # Token belongs to SALON_B, but the authenticated owner is for SALON_A
         mock_db.table.return_value = _chain([_TOKEN_B_WAITING])
-        client = TestClient(app, raise_server_exceptions=False)
+        client = TestClient(app)
         resp = client.get(f"/api/tokens/{TOKEN_B}")
         self.assertEqual(resp.status_code, 403,
                          f"Expected 403, got {resp.status_code}: {resp.text}")
@@ -207,7 +207,7 @@ class TestHistoryReadSecurity(unittest.TestCase):
     def test_admin_queue_endpoint_requires_authentication(self):
         """GET /api/salons/{id}/queue/admin must reject unauthenticated callers."""
         app.dependency_overrides = {}
-        client = TestClient(app, raise_server_exceptions=False)
+        client = TestClient(app)
         resp = client.get(f"/api/salons/{SALON_A}/queue/admin")
         self.assertIn(resp.status_code, [401, 403])
 
@@ -217,7 +217,7 @@ class TestHistoryReadSecurity(unittest.TestCase):
         """Owner of SALON_B cannot access the admin queue for SALON_A (403)."""
         app.dependency_overrides[get_current_user_with_profile] = lambda: _owner_b()
         mock_db.table.return_value = _chain([])
-        client = TestClient(app, raise_server_exceptions=False)
+        client = TestClient(app)
         # Owner B requesting SALON_A's admin queue
         resp = client.get(f"/api/salons/{SALON_A}/queue/admin")
         self.assertEqual(resp.status_code, 403,
@@ -248,7 +248,7 @@ class TestTokenMutationSecurity(unittest.TestCase):
         rpc_chain.execute.return_value = rpc_result
         mock_db.rpc.return_value = rpc_chain
 
-        client = TestClient(app, raise_server_exceptions=False)
+        client = TestClient(app)
         resp = client.post("/api/tokens", json={
             "salon_id": SALON_A,
             "service_id": SERVICE_A,
@@ -277,7 +277,7 @@ class TestTokenMutationSecurity(unittest.TestCase):
             return _chain([])
         mock_db.table.side_effect = _table
 
-        client = TestClient(app, raise_server_exceptions=False)
+        client = TestClient(app)
         resp = client.put(f"/api/tokens/{TOKEN_A}/cancel")
         self.assertEqual(resp.status_code, 200,
                          f"Expected 200 for own cancel, got {resp.status_code}: {resp.text}")
@@ -293,7 +293,7 @@ class TestTokenMutationSecurity(unittest.TestCase):
             "salon_id": SALON_B,
             "status": "waiting",
         }])
-        client = TestClient(app, raise_server_exceptions=False)
+        client = TestClient(app)
         resp = client.put(f"/api/tokens/{TOKEN_B}/cancel")
         self.assertEqual(resp.status_code, 403,
                          f"Expected 403, got {resp.status_code}: {resp.text}")
@@ -308,7 +308,7 @@ class TestTokenMutationSecurity(unittest.TestCase):
             "salon_id": SALON_A,
             "status": "waiting",
         }])
-        client = TestClient(app, raise_server_exceptions=False)
+        client = TestClient(app)
         for action in ("call", "start", "complete", "skip"):
             resp = client.put(f"/api/tokens/{TOKEN_A}/{action}")
             self.assertEqual(resp.status_code, 403,
@@ -330,7 +330,7 @@ class TestTokenMutationSecurity(unittest.TestCase):
             return _chain([])
         mock_db.table.side_effect = _table
 
-        client = TestClient(app, raise_server_exceptions=False)
+        client = TestClient(app)
         resp = client.put(f"/api/tokens/{TOKEN_A}/call")
         self.assertEqual(resp.status_code, 200,
                          f"Expected 200 for owner call, got {resp.status_code}: {resp.text}")
@@ -346,7 +346,7 @@ class TestTokenMutationSecurity(unittest.TestCase):
             "salon_id": SALON_B,
             "status": "waiting",
         }])
-        client = TestClient(app, raise_server_exceptions=False)
+        client = TestClient(app)
         for action in ("call", "start", "complete", "skip", "cancel"):
             resp = client.put(f"/api/tokens/{TOKEN_B}/{action}")
             self.assertEqual(resp.status_code, 403,
@@ -362,7 +362,7 @@ class TestTokenMutationSecurity(unittest.TestCase):
             "salon_id": SALON_A,
             "status": "waiting",  # complete requires status == 'serving'
         }])
-        client = TestClient(app, raise_server_exceptions=False)
+        client = TestClient(app)
         resp = client.put(f"/api/tokens/{TOKEN_A}/complete")
         self.assertEqual(resp.status_code, 400,
                          f"Expected 400 for invalid transition, got {resp.status_code}: {resp.text}")
@@ -377,7 +377,7 @@ class TestTokenMutationSecurity(unittest.TestCase):
             "salon_id": SALON_A,
             "status": "waiting",
         }])
-        client = TestClient(app, raise_server_exceptions=False)
+        client = TestClient(app)
         resp = client.put(f"/api/tokens/{TOKEN_A}/hack")
         self.assertEqual(resp.status_code, 400,
                          f"Expected 400 for invalid action, got {resp.status_code}: {resp.text}")
@@ -388,7 +388,7 @@ class TestTokenMutationSecurity(unittest.TestCase):
         """PUT on a token_id that doesn't exist returns 404."""
         app.dependency_overrides[get_current_user_with_profile] = lambda: _owner_a()
         mock_db.table.return_value = _chain([])  # empty — token not found
-        client = TestClient(app, raise_server_exceptions=False)
+        client = TestClient(app)
         resp = client.put(f"/api/tokens/{TOKEN_A}/call")
         self.assertEqual(resp.status_code, 404,
                          f"Expected 404 for missing token, got {resp.status_code}: {resp.text}")
@@ -397,7 +397,7 @@ class TestTokenMutationSecurity(unittest.TestCase):
     def test_unauthenticated_mutation_rejected(self):
         """PUT /api/tokens/{id}/{action} without auth → 401/403."""
         app.dependency_overrides = {}
-        client = TestClient(app, raise_server_exceptions=False)
+        client = TestClient(app)
         resp = client.put(f"/api/tokens/{TOKEN_A}/cancel")
         self.assertIn(resp.status_code, [401, 403],
                       f"Expected 401/403, got {resp.status_code}")
