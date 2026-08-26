@@ -737,3 +737,331 @@ $$;
 REVOKE ALL ON FUNCTION public.create_queue_token(UUID, UUID, UUID, UUID, TEXT) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.create_queue_token(UUID, UUID, UUID, UUID, TEXT) TO service_role;
 
+
+
+-- 009_security_hardening.sql
+-- Fix: Function Search Path Mutable warnings
+-- Attach a secure search_path to explicitly resolve objects to the public schema,
+-- preventing malicious shadowing of operators or tables.
+
+ALTER FUNCTION public.handle_new_user() 
+    SET search_path = public, pg_temp;
+
+ALTER FUNCTION public.get_salon_stats(p_salon_id UUID) 
+    SET search_path = public, pg_temp;
+
+ALTER FUNCTION public.get_salon_customers(p_salon_id UUID) 
+    SET search_path = public, pg_temp;
+
+ALTER FUNCTION public.get_analytics_summary(p_salon_id UUID) 
+    SET search_path = public, pg_temp;
+
+
+-- 010_performance_optimization.sql
+-- Fix: Performance Advisor Warnings (RLS Caching & Unindexed Foreign Keys)
+
+-- ==============================================================================
+-- PART 1: RLS OPTIMIZATION
+-- Replaces auth.uid() with (select auth.uid()) in row-level expressions.
+-- This allows Postgres to cache the function result for the entire statement
+-- instead of re-evaluating it for every row, drastically reducing CPU load.
+-- ==============================================================================
+
+-- Profiles
+DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
+CREATE POLICY "Users can view own profile"
+  ON public.profiles FOR SELECT
+  USING ((select auth.uid()) = id);
+
+-- Tokens
+DROP POLICY IF EXISTS "Customers can view own tokens" ON public.tokens;
+CREATE POLICY "Customers can view own tokens"
+  ON public.tokens FOR SELECT
+  USING ((select auth.uid()) = customer_id);
+
+DROP POLICY IF EXISTS "Salon owners and workers can view tenant tokens" ON public.tokens;
+CREATE POLICY "Salon owners and workers can view tenant tokens"
+  ON public.tokens FOR SELECT
+  USING (
+    (select auth.uid()) IN (SELECT owner_id FROM public.salons WHERE id = salon_id)
+    OR (select auth.uid()) IN (SELECT user_id FROM public.workers WHERE salon_id = tokens.salon_id)
+  );
+
+DROP POLICY IF EXISTS "Customers can create own tokens" ON public.tokens;
+CREATE POLICY "Customers can create own tokens"
+  ON public.tokens FOR INSERT
+  WITH CHECK ((select auth.uid()) = customer_id);
+
+DROP POLICY IF EXISTS "Customers can cancel own active tokens" ON public.tokens;
+CREATE POLICY "Customers can cancel own active tokens"
+  ON public.tokens FOR UPDATE
+  USING ((select auth.uid()) = customer_id)
+  WITH CHECK ((select auth.uid()) = customer_id);
+
+DROP POLICY IF EXISTS "Owners and workers can update tenant tokens" ON public.tokens;
+CREATE POLICY "Owners and workers can update tenant tokens"
+  ON public.tokens FOR UPDATE
+  USING (
+    (select auth.uid()) IN (SELECT owner_id FROM public.salons WHERE id = salon_id)
+    OR (select auth.uid()) IN (SELECT user_id FROM public.workers WHERE salon_id = tokens.salon_id)
+  )
+  WITH CHECK (
+    (select auth.uid()) IN (SELECT owner_id FROM public.salons WHERE id = salon_id)
+    OR (select auth.uid()) IN (SELECT user_id FROM public.workers WHERE salon_id = tokens.salon_id)
+  );
+
+-- Subscription Plans
+DROP POLICY IF EXISTS "Active plans viewable by everyone" ON public.subscription_plans;
+CREATE POLICY "Active plans viewable by everyone" ON public.subscription_plans 
+    FOR SELECT USING (is_active = true OR (select auth.uid()) IN (SELECT id FROM profiles WHERE role = 'super_admin'));
+
+DROP POLICY IF EXISTS "Super admins manage plans" ON public.subscription_plans;
+CREATE POLICY "Super admins manage plans" ON public.subscription_plans 
+    FOR ALL USING ((select auth.uid()) IN (SELECT id FROM profiles WHERE role = 'super_admin'));
+
+-- Subscriptions
+DROP POLICY IF EXISTS "Salon owners can view their own subscriptions" ON public.subscriptions;
+CREATE POLICY "Salon owners can view their own subscriptions" ON public.subscriptions 
+    FOR SELECT USING ((select auth.uid()) IN (SELECT owner_id FROM salons WHERE salons.id = subscriptions.salon_id));
+
+DROP POLICY IF EXISTS "Super admins manage all subscriptions" ON public.subscriptions;
+CREATE POLICY "Super admins manage all subscriptions" ON public.subscriptions 
+    FOR ALL USING ((select auth.uid()) IN (SELECT id FROM profiles WHERE role = 'super_admin'));
+
+-- Billing Customers
+DROP POLICY IF EXISTS "Salon owners can view their own billing customers" ON public.billing_customers;
+CREATE POLICY "Salon owners can view their own billing customers" ON public.billing_customers 
+    FOR SELECT USING ((select auth.uid()) IN (SELECT owner_id FROM salons WHERE salons.id = billing_customers.salon_id));
+
+DROP POLICY IF EXISTS "Super admins view all billing customers" ON public.billing_customers;
+CREATE POLICY "Super admins view all billing customers" ON public.billing_customers 
+    FOR ALL USING ((select auth.uid()) IN (SELECT id FROM profiles WHERE role = 'super_admin'));
+
+-- Payment Transactions
+DROP POLICY IF EXISTS "Salon owners can view their own payment transactions" ON public.payment_transactions;
+CREATE POLICY "Salon owners can view their own payment transactions" ON public.payment_transactions 
+    FOR SELECT USING ((select auth.uid()) IN (SELECT owner_id FROM salons WHERE salons.id = payment_transactions.salon_id));
+
+DROP POLICY IF EXISTS "Super admins view all payment transactions" ON public.payment_transactions;
+CREATE POLICY "Super admins view all payment transactions" ON public.payment_transactions 
+    FOR ALL USING ((select auth.uid()) IN (SELECT id FROM profiles WHERE role = 'super_admin'));
+
+
+-- ==============================================================================
+-- PART 2: UNINDEXED FOREIGN KEYS
+-- Adds missing indexes for foreign keys to prevent full table scans on cascading
+-- deletes or joined reads. Does NOT create duplicate indexes for Primary Keys
+-- (e.g. profiles.id) or where existing composites cover the left-most prefix.
+-- ==============================================================================
+
+-- Notifications
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON public.notifications(user_id);
+
+-- Ratings
+CREATE INDEX IF NOT EXISTS idx_ratings_customer_id ON public.ratings(customer_id);
+CREATE INDEX IF NOT EXISTS idx_ratings_token_id ON public.ratings(token_id);
+-- (salon_id is already covered by the ratings_salon_worker_idx composite index)
+
+-- Tokens
+CREATE INDEX IF NOT EXISTS idx_tokens_worker_id ON public.tokens(worker_id);
+CREATE INDEX IF NOT EXISTS idx_tokens_service_id ON public.tokens(service_id);
+-- (customer_id is already covered by tokens_customer_date_idx)
+
+-- Salons (In case migration 004 wasn't applied on production yet)
+CREATE INDEX IF NOT EXISTS idx_salons_owner_id ON public.salons(owner_id);
+
+
+-- 011_query_performance_optimization.sql
+-- Fix: Query Performance Audit Findings
+
+-- 1. Missing Composite Index for Analytics
+-- Supports get_analytics_summary RPC which joins tokens on salon_id and date.
+CREATE INDEX IF NOT EXISTS idx_tokens_salon_date 
+ON public.tokens(salon_id, date);
+
+-- 2. Missing Index on Public Salon Discovery
+-- Supports public /api/salons discovery where status='active'
+CREATE INDEX IF NOT EXISTS idx_salons_active 
+ON public.salons(status) 
+WHERE status = 'active';
+
+-- 3. Expensive Sort on Customer History
+-- Supports /api/tokens/history which filters by customer_id and orders by created_at
+CREATE INDEX IF NOT EXISTS idx_tokens_customer_created 
+ON public.tokens(customer_id, created_at DESC);
+
+
+-- 4. N+1 Query on Token Completion (Loyalty Points)
+-- Move loyalty point calculation from Python REST loop to a Postgres Trigger.
+CREATE OR REPLACE FUNCTION public.trigger_award_loyalty_points()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+    v_price numeric;
+    v_points int;
+BEGIN
+    -- Only act if a customer is attached
+    IF NEW.customer_id IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    -- Fetch the price of the completed service
+    SELECT price INTO v_price FROM public.services WHERE id = NEW.service_id;
+    
+    -- Calculate points (1 point per 10 currency units, minimum 1)
+    v_points := GREATEST(1, FLOOR(COALESCE(v_price, 0) / 10));
+
+    -- Atomically update the user's loyalty points
+    UPDATE public.profiles 
+    SET loyalty_points = COALESCE(loyalty_points, 0) + v_points
+    WHERE id = NEW.customer_id;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS tokens_award_loyalty_trigger ON public.tokens;
+
+CREATE TRIGGER tokens_award_loyalty_trigger
+AFTER UPDATE OF status ON public.tokens
+FOR EACH ROW
+WHEN (NEW.status = 'completed' AND OLD.status <> 'completed')
+EXECUTE FUNCTION public.trigger_award_loyalty_points();
+
+
+-- 012_production_reliability_fixes.sql
+
+-- ============================================================
+-- 1. SECURE PUBLIC QUEUE REALTIME
+-- ============================================================
+-- The tokens table restricts public SELECT via RLS to protect customer_id.
+-- This breaks Supabase Realtime for the public queue. We create a sanitized
+-- live_queue table managed entirely by triggers to restore public Realtime safely.
+
+CREATE TABLE IF NOT EXISTS public.live_queue (
+    id UUID PRIMARY KEY,
+    salon_id UUID NOT NULL,
+    token_number INT NOT NULL,
+    status TEXT NOT NULL,
+    service_id UUID,
+    worker_id UUID,
+    date DATE NOT NULL,
+    created_at TIMESTAMPTZ,
+    called_at TIMESTAMPTZ,
+    started_at TIMESTAMPTZ,
+    completed_at TIMESTAMPTZ,
+    cancelled_at TIMESTAMPTZ,
+    guest_name TEXT
+);
+
+ALTER TABLE public.live_queue ENABLE ROW LEVEL SECURITY;
+
+-- Public can view the sanitized live queue
+CREATE POLICY "Live queue viewable by everyone" 
+    ON public.live_queue FOR SELECT 
+    USING (true);
+
+-- Add to Realtime Publication
+ALTER PUBLICATION supabase_realtime ADD TABLE public.live_queue;
+
+-- Trigger function to keep live_queue synchronized with active tokens
+CREATE OR REPLACE FUNCTION public.sync_live_queue() 
+RETURNS trigger AS $$
+BEGIN
+    IF TG_OP = 'DELETE' THEN
+        DELETE FROM public.live_queue WHERE id = OLD.id;
+        RETURN OLD;
+    END IF;
+
+    -- Only mirror active tokens for the current day to keep table bounded
+    IF NEW.status IN ('waiting', 'called', 'serving') AND NEW.date = CURRENT_DATE THEN
+        INSERT INTO public.live_queue (
+            id, salon_id, token_number, status, service_id, worker_id, 
+            date, created_at, called_at, started_at, completed_at, cancelled_at, guest_name
+        ) VALUES (
+            NEW.id, NEW.salon_id, NEW.token_number, NEW.status, NEW.service_id, NEW.worker_id,
+            NEW.date, NEW.created_at, NEW.called_at, NEW.started_at, NEW.completed_at, NEW.cancelled_at, NEW.guest_name
+        )
+        ON CONFLICT (id) DO UPDATE SET
+            status = EXCLUDED.status,
+            service_id = EXCLUDED.service_id,
+            worker_id = EXCLUDED.worker_id,
+            called_at = EXCLUDED.called_at,
+            started_at = EXCLUDED.started_at;
+    ELSE
+        -- Remove if it becomes inactive or isn't for today
+        DELETE FROM public.live_queue WHERE id = NEW.id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp;
+
+DROP TRIGGER IF EXISTS tokens_sync_live_queue_trigger ON public.tokens;
+CREATE TRIGGER tokens_sync_live_queue_trigger
+    AFTER INSERT OR UPDATE OR DELETE ON public.tokens
+    FOR EACH ROW EXECUTE FUNCTION public.sync_live_queue();
+
+-- ============================================================
+-- 2. LOYALTY POINTS IDEMPOTENCY
+-- ============================================================
+-- Ensure loyalty points are strictly awarded once per token, even if
+-- status is toggled back and forth.
+
+CREATE TABLE IF NOT EXISTS public.loyalty_transactions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    customer_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    token_id UUID NOT NULL REFERENCES public.tokens(id) ON DELETE CASCADE,
+    points INT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT one_reward_per_token UNIQUE (token_id)
+);
+
+ALTER TABLE public.loyalty_transactions ENABLE ROW LEVEL SECURITY;
+
+-- Customers can view their own loyalty history
+CREATE POLICY "Users can view own loyalty transactions" 
+    ON public.loyalty_transactions FOR SELECT 
+    USING (auth.uid() = customer_id);
+
+-- Replace the existing award function to use the idempotency table
+CREATE OR REPLACE FUNCTION public.trigger_award_loyalty_points()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+    v_price numeric;
+    v_points int;
+BEGIN
+    -- Only act if a customer is attached
+    IF NEW.customer_id IS NULL THEN
+        RETURN NEW;
+    END IF;
+
+    -- Fetch the price of the completed service
+    SELECT price INTO v_price FROM public.services WHERE id = NEW.service_id;
+    
+    -- Calculate points (1 point per 10 currency units, minimum 1)
+    v_points := GREATEST(1, FLOOR(COALESCE(v_price, 0) / 10));
+
+    -- Attempt to insert idempotency record. 
+    -- If it already exists for this token, do nothing.
+    INSERT INTO public.loyalty_transactions (customer_id, token_id, points)
+    VALUES (NEW.customer_id, NEW.id, v_points)
+    ON CONFLICT (token_id) DO NOTHING;
+
+    -- If the insert was successful, award the points
+    IF FOUND THEN
+        UPDATE public.profiles 
+        SET loyalty_points = COALESCE(loyalty_points, 0) + v_points
+        WHERE id = NEW.customer_id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;

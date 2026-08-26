@@ -67,5 +67,5 @@ def submit_rating(rating: RatingCreate, user: dict = Depends(get_current_user)):
 def get_salon_ratings(salon_id: UUID):
     res = supabase_admin.table("ratings").select(
         "*, profiles(full_name, avatar_url), workers(name)"
-    ).eq("salon_id", salon_id).order("created_at", desc=True).execute()
+    ).eq("salon_id", salon_id).order("created_at", desc=True).limit(50).execute()
     return {"ratings": res.data}

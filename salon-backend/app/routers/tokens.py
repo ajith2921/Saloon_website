@@ -201,35 +201,7 @@ def update_token_status(token_id: UUID, action: str, user: dict = Depends(get_cu
 
     updated_token = res.data[0]
 
-    # ── Award loyalty points on completion ───────────────────────────────────
-    # Points = floor(service_price / 10). Runs fire-and-forget style (errors suppressed).
-    if action == "complete":
-        try:
-            # Fetch service price via the token's service_id
-            svc_res = supabase_admin.table("tokens") \
-                .select("customer_id, services(price)") \
-                .eq("id", token_id) \
-                .execute()
-            if svc_res.data:
-                row = svc_res.data[0]
-                customer_id = row.get("customer_id")
-                price = float((row.get("services") or {}).get("price") or 0)
-                points_earned = max(1, int(price // 10))  # min 1 point per visit
-                if customer_id and points_earned > 0:
-                    # Atomic increment using Supabase RPC would be ideal;
-                    # fallback: read-then-write (acceptable for low-concurrency loyalty)
-                    profile_res = supabase_admin.table("profiles") \
-                        .select("loyalty_points") \
-                        .eq("id", customer_id) \
-                        .execute()
-                    if profile_res.data:
-                        current = profile_res.data[0].get("loyalty_points", 0) or 0
-                        supabase_admin.table("profiles") \
-                            .update({"loyalty_points": current + points_earned}) \
-                            .eq("id", customer_id) \
-                            .execute()
-        except Exception:
-            pass  # Loyalty award is best-effort; don't fail the main operation
+
 
     return updated_token
 
