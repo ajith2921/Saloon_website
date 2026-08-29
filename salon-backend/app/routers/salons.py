@@ -92,9 +92,11 @@ def get_admin_live_queue(
     # Allow salon_owner and worker of this salon, plus super_admin.
     require_salon_access(user, salon_id, {"salon_owner", "worker"})
 
-    # Use IST date via consolidated helper — avoids double-RPC overhead
-    tz_res = supabase_admin.rpc('get_ist_today').execute()
-    today = str(tz_res.data) if tz_res.data else str(date.today())
+    # Compute today's date in IST (Asia/Kolkata) directly in Python (0ms vs 500ms RPC)
+    from datetime import datetime, timezone, timedelta
+    ist_tz = timezone(timedelta(hours=5, minutes=30))
+    today = datetime.now(ist_tz).strftime("%Y-%m-%d")
+
     res = supabase_admin.table("tokens").select(
         "id, token_number, status, service_id, worker_id, "
         "services(name, duration_minutes), workers(name, photo_url), "

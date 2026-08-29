@@ -65,9 +65,20 @@ def submit_rating(request: Request, rating: RatingCreate, user: dict = Depends(g
         raise HTTPException(status_code=400, detail="Rating already submitted for this token")
 
 
+@router.get("")
+def get_ratings(salon_id: UUID = None):
+    query = supabase_admin.table("ratings").select(
+        "*, profiles(full_name, avatar_url), workers(name)"
+    ).order("created_at", desc=True).limit(50)
+    if salon_id:
+        query = query.eq("salon_id", str(salon_id))
+    res = query.execute()
+    return {"ratings": res.data or []}
+
+
 @router.get("/salon/{salon_id}")
 def get_salon_ratings(salon_id: UUID):
     res = supabase_admin.table("ratings").select(
         "*, profiles(full_name, avatar_url), workers(name)"
-    ).eq("salon_id", salon_id).order("created_at", desc=True).limit(50).execute()
-    return {"ratings": res.data}
+    ).eq("salon_id", str(salon_id)).order("created_at", desc=True).limit(50).execute()
+    return {"ratings": res.data or []}
