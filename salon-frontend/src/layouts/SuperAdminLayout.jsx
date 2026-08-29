@@ -90,9 +90,9 @@ export default function SuperAdminLayout() {
       </aside>
 
       {/* ── Main content ── */}
-      <div id="super-main-content" className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 pb-24 md:pb-6 scrollbar-thin">
+      <main id="super-main-content" className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 pb-24 md:pb-6 scrollbar-thin">
         <Outlet />
-      </div>
+      </main>
 
       {/* ── Mobile Bottom Navigation — all 5 items ── */}
       <nav

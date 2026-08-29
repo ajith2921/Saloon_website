@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+Disallow: /super-admin/
+Disallow: /admin/
+Disallow: /login
+Disallow: /register
+
+# Public pages indexable
+Allow: /salons
+Allow: /salons/
+Allow: /
+
+Sitemap: https://saloon-website-ashen.vercel.app/sitemap.xml

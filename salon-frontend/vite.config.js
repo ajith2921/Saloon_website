@@ -36,11 +36,38 @@ export default defineConfig({
     setupFiles: './src/setupTests.js',
   },
   build: {
+    // Raise warning threshold — vendor split below makes this expected
+    chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
         manualChunks(id) {
+          // React core — loaded on every page, tiny, cached forever
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
+            return 'react-core'
+          }
+          // Router — always needed
+          if (id.includes('node_modules/react-router')) {
+            return 'react-router'
+          }
+          // Charts — only loaded on analytics/revenue pages
+          if (id.includes('node_modules/recharts') || id.includes('node_modules/d3-')) {
+            return 'charts'
+          }
+          // Icons — medium sized, cacheable
+          if (id.includes('node_modules/lucide-react')) {
+            return 'icons'
+          }
+          // Supabase auth client
+          if (id.includes('node_modules/@supabase') || id.includes('node_modules/supabase')) {
+            return 'supabase'
+          }
+          // Axios HTTP
+          if (id.includes('node_modules/axios')) {
+            return 'http-client'
+          }
+          // All other dependencies bundled as vendor (much smaller now)
           if (id.includes('node_modules')) {
-            return 'vendor';
+            return 'vendor'
           }
         }
       }
