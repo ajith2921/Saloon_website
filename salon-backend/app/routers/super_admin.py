@@ -183,3 +183,74 @@ def get_all_users(
     res = query.order("created_at", desc=True).range(offset, offset + limit - 1).execute()
     return {"users": res.data or []}
 
+
+from pydantic import BaseModel
+
+class GrantSubscriptionRequest(BaseModel):
+    plan_id: UUID
+
+@router.post("/salons/{salon_id}/grant-subscription")
+@limiter.limit("20/minute")
+def grant_subscription(
+    request: Request, 
+    salon_id: UUID, 
+    payload: GrantSubscriptionRequest, 
+    user: dict = Depends(require_role("super_admin"))
+):
+    """Bypass billing and manually assign an active subscription to a salon."""
+    # 1. Mark any existing subscriptions for this salon as cancelled
+    supabase_admin.table("subscriptions").update({"status": "cancelled"}).eq("salon_id", str(salon_id)).neq("status", "cancelled").execute()
+    
+    # 2. Insert new active subscription
+    new_sub = {
+        "salon_id": str(salon_id),
+        "plan_id": str(payload.plan_id),
+        "status": "active",
+        "provider_subscription_id": "super_admin_granted"
+    }
+    res = supabase_admin.table("subscriptions").insert(new_sub).execute()
+    
+    if not res.data:
+        raise HTTPException(status_code=500, detail="Failed to grant subscription")
+        
+    actor_id = user.get("sub")
+    supabase_admin.table("super_admin_audit_logs").insert({
+        "actor_id": actor_id, 
+        "action": "GRANT_SUBSCRIPTION", 
+        "target_id": str(salon_id), 
+        "target_type": "salon"
+    }).execute()
+    
+    return {"status": "success", "subscription": res.data[0]}
+
+
+class UpdateTokenLimitRequest(BaseModel):
+    new_limit: int
+
+@router.post("/salons/{salon_id}/update-token-limit")
+@limiter.limit("20/minute")
+def update_token_limit(
+    request: Request, 
+    salon_id: UUID, 
+    payload: UpdateTokenLimitRequest, 
+    user: dict = Depends(require_role("super_admin"))
+):
+    """Manually override the max_daily_tokens for a salon."""
+    if payload.new_limit < 1:
+        raise HTTPException(status_code=400, detail="Token limit must be at least 1")
+        
+    res = supabase_admin.table("salons").update({"max_daily_tokens": payload.new_limit}).eq("id", str(salon_id)).execute()
+    
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Salon not found")
+        
+    actor_id = user.get("sub")
+    supabase_admin.table("super_admin_audit_logs").insert({
+        "actor_id": actor_id, 
+        "action": "UPDATE_TOKEN_LIMIT", 
+        "target_id": str(salon_id), 
+        "target_type": "salon"
+    }).execute()
+    
+    return {"status": "success", "salon": res.data[0]}
+

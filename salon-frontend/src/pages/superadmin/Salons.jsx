@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Building2, Search, Check, Ban, X, Filter } from 'lucide-react'
 import { useFetch } from '../../hooks/useApi'
-import { Skeleton, EmptyState, ErrorState, PageHeader, Card, Button, Input, Select, ConfirmModal } from '../../components/ui'
+import { Skeleton, EmptyState, ErrorState, PageHeader, Card, Button, Input, Select, ConfirmModal, Modal } from '../../components/ui'
 import { useToast } from '../../context/ToastContext'
 import api from '../../lib/api'
 
@@ -78,6 +78,93 @@ const STATUS_OPTIONS = [
   { value: 'inactive',  label: 'Inactive' },
 ]
 
+function GrantSubscriptionModal({ salon, onClose, onRefresh }) {
+  const { data, loading } = useFetch('/api/subscriptions/plans')
+  const plans = data || []
+  const [selectedPlan, setSelectedPlan] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const { success, error } = useToast()
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (!selectedPlan) return
+    setSubmitting(true)
+    try {
+      await api.post(`/api/super-admin/salons/${salon.id}/grant-subscription`, { plan_id: selectedPlan })
+      success(`Subscription granted to ${salon.name}`)
+      onRefresh()
+      onClose()
+    } catch (err) {
+      error(err.response?.data?.detail || 'Failed to grant subscription')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <Modal open={!!salon} onClose={onClose} title={`Grant Subscription: ${salon?.name}`}>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Select
+          label="Select Plan"
+          value={selectedPlan}
+          onChange={(e) => setSelectedPlan(e.target.value)}
+          required
+        >
+          <option value="">-- Choose a plan --</option>
+          {plans.map(p => (
+            <option key={p.id} value={p.id}>{p.name} (${p.price})</option>
+          ))}
+        </Select>
+        <div className="flex justify-end gap-2 pt-4">
+          <Button variant="ghost" onClick={onClose} type="button">Cancel</Button>
+          <Button type="submit" loading={submitting || loading}>Grant Subscription</Button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
+function UpdateTokenLimitModal({ salon, onClose, onRefresh }) {
+  const [limit, setLimit] = useState(salon?.currentLimit || 50)
+  const [submitting, setSubmitting] = useState(false)
+  const { success, error } = useToast()
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setSubmitting(true)
+    try {
+      await api.post(`/api/super-admin/salons/${salon.id}/update-token-limit`, { new_limit: parseInt(limit, 10) })
+      success(`Token limit updated for ${salon.name}`)
+      onRefresh()
+      onClose()
+    } catch (err) {
+      error(err.response?.data?.detail || 'Failed to update token limit')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <Modal open={!!salon} onClose={onClose} title={`Update Token Limit: ${salon?.name}`}>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Input
+          type="number"
+          label="Max Daily Tokens"
+          value={limit}
+          onChange={(e) => setLimit(e.target.value)}
+          required
+          min="1"
+        />
+        <div className="flex justify-end gap-2 pt-4">
+          <Button variant="ghost" onClick={onClose} type="button">Cancel</Button>
+          <Button type="submit" loading={submitting}>Update Limit</Button>
+        </div>
+      </form>
+    </Modal>
+  )
+}
+
+
 export default function Salons() {
   const { data, loading, error, refetch } = useFetch('/api/super-admin/salons')
   const salons = data?.salons ?? []
@@ -87,6 +174,8 @@ export default function Salons() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [actionLoading, setActionLoading] = useState(null)
   const [confirmAction, setConfirmAction] = useState(null) // { id, name, action }
+  const [subscriptionModal, setSubscriptionModal] = useState(null) // { id, name }
+  const [tokenLimitModal, setTokenLimitModal] = useState(null) // { id, name, currentLimit }
 
   /** Fire the confirmed action */
   const executeAction = async () => {
@@ -262,6 +351,24 @@ export default function Salons() {
                       <td className="p-4 text-dark-200 text-xs">{formatDate(s.created_at)}</td>
                       <td className="p-4">
                         <div className="flex justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSubscriptionModal({ id: s.id, name: s.name })}
+                            className="text-brand-400 hover:text-brand-300 hover:bg-brand-500/10"
+                            aria-label={`Grant subscription to ${s.name}`}
+                          >
+                            Grant Plan
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setTokenLimitModal({ id: s.id, name: s.name, currentLimit: s.max_daily_tokens })}
+                            className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
+                            aria-label={`Update tokens for ${s.name}`}
+                          >
+                            Set Tokens
+                          </Button>
                           {s.status === 'pending' && (
                             <Button
                               variant="secondary"
@@ -319,6 +426,24 @@ export default function Salons() {
           message={`${ACTION_MESSAGES[confirmAction.action].message}`}
           confirmLabel={ACTION_MESSAGES[confirmAction.action].confirmLabel}
           danger={ACTION_MESSAGES[confirmAction.action].danger}
+        />
+      )}
+
+      {/* Grant Subscription Modal */}
+      {subscriptionModal && (
+        <GrantSubscriptionModal
+          salon={subscriptionModal}
+          onClose={() => setSubscriptionModal(null)}
+          onRefresh={refetch}
+        />
+      )}
+
+      {/* Update Token Limit Modal */}
+      {tokenLimitModal && (
+        <UpdateTokenLimitModal
+          salon={tokenLimitModal}
+          onClose={() => setTokenLimitModal(null)}
+          onRefresh={refetch}
         />
       )}
     </div>
