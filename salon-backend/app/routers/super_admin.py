@@ -108,6 +108,20 @@ def get_pending_salons(request: Request, user: dict = Depends(require_role("supe
     return {"salons": _enrich_with_owner_emails(salons)}
 
 
+def _log_audit(actor_id: str, action: str, target_id: str, target_type: str, metadata: dict = None):
+    """Safely log audit entries without crashing core operations if audit table permissions are restricted."""
+    try:
+        supabase_admin.table("super_admin_audit_logs").insert({
+            "actor_id": actor_id,
+            "action": action,
+            "target_id": str(target_id),
+            "target_type": target_type,
+            "metadata": metadata or {}
+        }).execute()
+    except Exception as e:
+        logger.warning(f"Audit log recording skipped: {e}")
+
+
 @router.post("/salons/{salon_id}/approve")
 @limiter.limit("20/minute")
 def approve_salon(request: Request, salon_id: UUID, user: dict = Depends(require_role("super_admin"))):
@@ -115,9 +129,7 @@ def approve_salon(request: Request, salon_id: UUID, user: dict = Depends(require
     if not res.data:
         raise HTTPException(status_code=404, detail="Salon not found")
     actor_id = user.get("sub")
-    supabase_admin.table("super_admin_audit_logs").insert({
-        "actor_id": actor_id, "action": "APPROVE_SALON", "target_id": str(salon_id), "target_type": "salon"
-    }).execute()
+    _log_audit(actor_id, "APPROVE_SALON", str(salon_id), "salon")
     return {"status": "success", "salon": res.data[0]}
 
 
@@ -128,9 +140,7 @@ def suspend_salon(request: Request, salon_id: UUID, user: dict = Depends(require
     if not res.data:
         raise HTTPException(status_code=404, detail="Salon not found")
     actor_id = user.get("sub")
-    supabase_admin.table("super_admin_audit_logs").insert({
-        "actor_id": actor_id, "action": "SUSPEND_SALON", "target_id": str(salon_id), "target_type": "salon"
-    }).execute()
+    _log_audit(actor_id, "SUSPEND_SALON", str(salon_id), "salon")
     return {"status": "success", "salon": res.data[0]}
 
 
@@ -142,9 +152,7 @@ def reactivate_salon(request: Request, salon_id: UUID, user: dict = Depends(requ
     if not res.data:
         raise HTTPException(status_code=404, detail="Salon not found")
     actor_id = user.get("sub")
-    supabase_admin.table("super_admin_audit_logs").insert({
-        "actor_id": actor_id, "action": "REACTIVATE_SALON", "target_id": str(salon_id), "target_type": "salon"
-    }).execute()
+    _log_audit(actor_id, "REACTIVATE_SALON", str(salon_id), "salon")
     return {"status": "success", "salon": res.data[0]}
 
 
@@ -157,12 +165,16 @@ def get_audit_logs(
     user: dict = Depends(require_role("super_admin")),
 ):
     """Returns immutable audit log of all Super Admin actions."""
-    res = supabase_admin.table("super_admin_audit_logs") \
-        .select("*, profiles!actor_id(full_name)") \
-        .order("created_at", desc=True) \
-        .range(offset, offset + limit - 1) \
-        .execute()
-    return {"logs": res.data or []}
+    try:
+        res = supabase_admin.table("super_admin_audit_logs") \
+            .select("*, profiles!actor_id(full_name)") \
+            .order("created_at", desc=True) \
+            .range(offset, offset + limit - 1) \
+            .execute()
+        return {"logs": res.data or []}
+    except Exception as e:
+        logger.warning(f"Failed to query audit logs: {e}")
+        return {"logs": []}
 
 
 @router.get("/users")
@@ -214,12 +226,7 @@ def grant_subscription(
         raise HTTPException(status_code=500, detail="Failed to grant subscription")
         
     actor_id = user.get("sub")
-    supabase_admin.table("super_admin_audit_logs").insert({
-        "actor_id": actor_id, 
-        "action": "GRANT_SUBSCRIPTION", 
-        "target_id": str(salon_id), 
-        "target_type": "salon"
-    }).execute()
+    _log_audit(actor_id, "GRANT_SUBSCRIPTION", str(salon_id), "salon", {"plan_id": str(payload.plan_id)})
     
     return {"status": "success", "subscription": res.data[0]}
 
@@ -245,12 +252,8 @@ def update_token_limit(
         raise HTTPException(status_code=404, detail="Salon not found")
         
     actor_id = user.get("sub")
-    supabase_admin.table("super_admin_audit_logs").insert({
-        "actor_id": actor_id, 
-        "action": "UPDATE_TOKEN_LIMIT", 
-        "target_id": str(salon_id), 
-        "target_type": "salon"
-    }).execute()
+    _log_audit(actor_id, "UPDATE_TOKEN_LIMIT", str(salon_id), "salon", {"new_limit": payload.new_limit})
     
     return {"status": "success", "salon": res.data[0]}
+
 
