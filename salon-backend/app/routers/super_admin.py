@@ -1,4 +1,4 @@
-from uuid import UUID
+from uuid import UUID, uuid4
 from fastapi import APIRouter, Depends, HTTPException, Request, Query
 from typing import Optional
 from ..dependencies import require_role
@@ -218,7 +218,7 @@ def grant_subscription(
         "salon_id": str(salon_id),
         "plan_id": str(payload.plan_id),
         "status": "active",
-        "provider_subscription_id": "super_admin_granted"
+        "provider_subscription_id": f"sa_granted_{uuid4().hex[:16]}"
     }
     res = supabase_admin.table("subscriptions").insert(new_sub).execute()
     
