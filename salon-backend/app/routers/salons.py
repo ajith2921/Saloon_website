@@ -185,6 +185,36 @@ def update_salon(request: Request, salon_id: UUID, updates: SalonUpdate, user: d
     return res.data[0]
 
 
+@router.post("")
+@limiter.limit("5/minute")
+def create_salon(request: Request, data: SalonUpdate, user: dict = Depends(get_current_user_with_profile)):
+    """Create a new salon and link it to the user."""
+    # Ensure only owners or admins can create salons
+    if user.get("db_role") not in ("salon_owner", "super_admin"):
+        raise HTTPException(status_code=403, detail="Only salon owners can create a salon")
+    
+    # Check if they already have a salon (usually 1 per owner)
+    if user.get("db_salon_id"):
+        raise HTTPException(status_code=400, detail="User already has a salon linked")
+
+    payload = {k: v for k, v in data.model_dump().items() if v is not None}
+    payload["owner_id"] = user.get("sub") or user.get("id")
+    payload["status"] = "active"
+
+    # Insert into salons
+    res = supabase_admin.table("salons").insert(payload).execute()
+    if not res.data:
+        raise HTTPException(status_code=500, detail="Failed to create salon")
+    
+    new_salon = res.data[0]
+    
+    # Link the salon to the user's profile
+    supabase_admin.table("profiles").update({"salon_id": new_salon["id"]}).eq("id", payload["owner_id"]).execute()
+    
+    return new_salon
+
+
+
 @router.get("/{salon_id}/customers")
 def get_salon_customers(salon_id: UUID, user: dict = Depends(get_current_user_with_profile)):
     """Returns distinct customers who have had a token at this salon."""

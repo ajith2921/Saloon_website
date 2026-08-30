@@ -45,7 +45,7 @@ export default function Settings() {
   const [form, setForm] = useState(null)
   const [saving, setSaving] = useState(false)
 
-  // Populate form once salon data loads
+  // Populate form once salon data loads, or initialize if no salon exists
   useEffect(() => {
     if (salon) {
       setForm({
@@ -64,8 +64,26 @@ export default function Settings() {
         latitude: salon.latitude || null,
         longitude: salon.longitude || null,
       })
+    } else if (!salonId) {
+      // If there's no salonId, we should allow creating one
+      setForm({
+        name: '',
+        description: '',
+        address: '',
+        city: '',
+        phone: '',
+        email: '',
+        opening_time: '09:00',
+        closing_time: '21:00',
+        max_daily_tokens: 50,
+        avg_service_minutes: 30,
+        logo_url: '',
+        cover_image_url: '',
+        latitude: null,
+        longitude: null,
+      })
     }
-  }, [salon])
+  }, [salon, salonId])
 
   const handleChange = (e) => {
     const { name, value, type } = e.target
@@ -106,13 +124,21 @@ export default function Settings() {
     }
   }
 
+  const { refreshProfile } = useAuth()
+
   const handleSave = async (e) => {
     e.preventDefault()
-    if (!salonId) return
     setSaving(true)
     try {
-      await api.put(`/api/salons/${salonId}`, form)
-      success('Salon settings saved successfully!')
+      if (salonId) {
+        await api.put(`/api/salons/${salonId}`, form)
+        success('Salon settings saved successfully!')
+      } else {
+        await api.post('/api/salons', form)
+        success('Salon created successfully!')
+        // Refresh profile to get the new salonId
+        await refreshProfile()
+      }
     } catch (err) {
       showError(err.response?.data?.detail || err.message || 'Failed to save settings')
     } finally {
@@ -122,13 +148,6 @@ export default function Settings() {
 
   if (loading || !form) return (
     <div className="flex justify-center py-20"><Spinner size="lg" /></div>
-  )
-
-  if (!salonId) return (
-    <div className="max-w-4xl">
-      <h1 className="text-2xl font-bold text-white mb-2">Salon Settings</h1>
-      <p className="text-dark-100">Your account is not linked to a salon. Please contact support.</p>
-    </div>
   )
 
   return (
