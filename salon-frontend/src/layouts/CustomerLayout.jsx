@@ -2,14 +2,16 @@ import React from 'react'
 import { Outlet, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Home, Search, Clock, User, LogOut, Scissors, Bell } from 'lucide-react'
-import { useNotifications } from '../hooks/useApi'
+import { useFetch } from '../hooks/useApi'
 import { Button } from '../components/ui'
 
 export default function CustomerLayout() {
   const { user, profile, signOut } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const { data: notificationsData } = useNotifications()
+  // Only fetch notifications when the user is authenticated — avoids a 422
+  // error on every public page visit by anonymous visitors.
+  const { data: notificationsData } = useFetch(user ? '/api/notifications' : null)
 
   const unreadCount = user ? (notificationsData?.notifications ?? []).filter(n => !n.is_read).length : 0
 
