@@ -136,30 +136,7 @@ export default function Login() {
           </div>
         </Card>
 
-        {/* Demo credentials — clickable to autofill */}
-        <div className="mt-4 card p-4">
-          <p className="text-xs text-dark-200 text-center font-medium mb-3">Demo accounts — click to fill</p>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <button
-              type="button"
-              onClick={() => setForm({ email: 'customer@demo.com', password: 'demo1234' })}
-              className="text-left p-3 rounded-xl bg-surface-tertiary hover:bg-white/[0.06] border border-white/[0.06] hover:border-white/[0.12] transition-all"
-            >
-              <p className="text-white font-semibold mb-1">Customer</p>
-              <p className="text-dark-200">customer@demo.com</p>
-              <p className="text-dark-300">demo1234</p>
-            </button>
-            <button
-              type="button"
-              onClick={() => setForm({ email: 'admin@demo.com', password: 'demo1234' })}
-              className="text-left p-3 rounded-xl bg-surface-tertiary hover:bg-white/[0.06] border border-white/[0.06] hover:border-white/[0.12] transition-all"
-            >
-              <p className="text-white font-semibold mb-1">Salon Admin</p>
-              <p className="text-dark-200">admin@demo.com</p>
-              <p className="text-dark-300">demo1234</p>
-            </button>
-          </div>
-        </div>
+
       </div>
     </div>
   )
