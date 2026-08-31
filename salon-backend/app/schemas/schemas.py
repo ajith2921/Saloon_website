@@ -34,6 +34,7 @@ class TokenCreate(BaseModel):
     service_id: UUID
     worker_id: Optional[UUID] = None
     guest_name: Optional[str] = None
+    guest_phone: Optional[str] = None
 
 
 class TokenReassign(BaseModel):

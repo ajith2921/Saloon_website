@@ -13,6 +13,11 @@ class Settings(BaseSettings):
     razorpay_key_secret: Optional[str] = None
     razorpay_webhook_secret: Optional[str] = None
 
+    # Twilio SMS Configuration
+    twilio_account_sid: Optional[str] = None
+    twilio_auth_token: Optional[str] = None
+    twilio_phone_number: Optional[str] = None
+
     # Platform fee per token (configurable, not hardcoded)
     platform_fee_per_token: float = 5.0
 

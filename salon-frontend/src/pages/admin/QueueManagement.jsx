@@ -28,7 +28,7 @@ export default function QueueManagement() {
   const [reassignModalOpen, setReassignModalOpen] = useState(false)
   const [targetToken, setTargetToken] = useState(null)
   
-  const [walkInForm, setWalkInForm] = useState({ guest_name: '', service_id: '', worker_id: '' })
+  const [walkInForm, setWalkInForm] = useState({ guest_name: '', guest_phone: '', service_id: '', worker_id: '' })
   const [reassignWorkerId, setReassignWorkerId] = useState('')
 
   const updateStatus = async (tokenId, action) => {
@@ -49,13 +49,14 @@ export default function QueueManagement() {
     try {
       await api.post('/api/tokens', {
         salon_id: salonId,
-        guest_name: walkInForm.guest_name,
         service_id: walkInForm.service_id,
-        worker_id: walkInForm.worker_id || null
+        worker_id: walkInForm.worker_id || null,
+        guest_name: walkInForm.guest_name,
+        guest_phone: walkInForm.guest_phone || null
       })
       success("Walk-in token added")
       setWalkInModalOpen(false)
-      setWalkInForm({ guest_name: '', service_id: '', worker_id: '' })
+      setWalkInForm({ guest_name: '', guest_phone: '', service_id: '', worker_id: '' })
     } catch (err) {
       showError(err.message || "Failed to create walk-in token")
     }
@@ -292,13 +293,27 @@ export default function QueueManagement() {
         title="Add Walk-in Token"
       >
         <form onSubmit={handleWalkInSubmit} className="space-y-4">
-          <Input 
-            label="Guest Name"
-            value={walkInForm.guest_name}
-            onChange={(e) => setWalkInForm({ ...walkInForm, guest_name: e.target.value })}
-            placeholder="E.g., John Doe"
-            required 
-          />
+          <div>
+            <label className="block text-sm font-medium text-dark-100 mb-1">Customer Name *</label>
+            <input
+              type="text"
+              className="w-full bg-dark-500 border border-dark-400 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary-500 transition-colors"
+              placeholder="E.g. John Doe"
+              value={walkInForm.guest_name}
+              onChange={(e) => setWalkInForm({ ...walkInForm, guest_name: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-dark-100 mb-1">Phone Number (Optional)</label>
+            <input
+              type="text"
+              className="w-full bg-dark-500 border border-dark-400 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-primary-500 transition-colors"
+              placeholder="E.g. +1234567890"
+              value={walkInForm.guest_phone}
+              onChange={(e) => setWalkInForm({ ...walkInForm, guest_phone: e.target.value })}
+            />
+            <p className="text-xs text-dark-200 mt-1">For SMS notifications when token is called</p>
+          </div>
           <Select
             label="Service"
             value={walkInForm.service_id}

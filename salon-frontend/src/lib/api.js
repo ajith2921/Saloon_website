@@ -33,8 +33,12 @@ api.interceptors.response.use(
     }
 
     const message = error.response?.data?.detail || error.message || 'Something went wrong'
-    // Let individual callers handle the error
-    console.warn('[API Error]', status, message)
+    
+    // Skip logging for expected 404s (e.g. no active token, no subscription)
+    if (status !== 404) {
+      console.warn('[API Error]', status, message)
+    }
+    
     return Promise.reject(new Error(message))
   }
 )

@@ -79,5 +79,5 @@ def create_checkout(
             currency=plan["currency"]
         )
     except Exception as e:
-        logger.error(f"Razorpay checkout error: {e}")
-        raise HTTPException(status_code=500, detail="Unable to start subscription checkout.")
+        logger.exception("Razorpay checkout error")
+        raise HTTPException(status_code=500, detail=f"Unable to start subscription checkout: {str(e)}")

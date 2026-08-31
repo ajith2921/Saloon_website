@@ -1,5 +1,5 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, BackgroundTasks
 from datetime import date, datetime, timezone
 
 # pyrefly: ignore [missing-import]
@@ -9,6 +9,7 @@ from ..dependencies import get_current_user, get_current_user_with_profile, requ
 # pyrefly: ignore [missing-import]
 from ..database import supabase_admin
 from ..limiter import limiter
+from ..services.sms import send_sms_notification
 
 router = APIRouter(prefix="/api/tokens", tags=["Tokens"])
 
@@ -45,6 +46,7 @@ def create_token(request: Request, token: TokenCreate, user: dict = Depends(get_
             "p_service_id": str(token.service_id),
             "p_worker_id": str(token.worker_id) if token.worker_id else None,
             "p_guest_name": guest_name,
+            "p_guest_phone": token.guest_phone,
         }).execute()
         if not res.data:
             raise HTTPException(status_code=500, detail="Failed to generate token. Please try again.")
@@ -122,7 +124,7 @@ def get_single_token(token_id: UUID, user: dict = Depends(get_current_user_with_
 
 @router.put("/{token_id}/{action}")
 @limiter.limit("30/minute")
-def update_token_status(request: Request, token_id: UUID, action: str, user: dict = Depends(get_current_user_with_profile)):
+def update_token_status(request: Request, token_id: UUID, action: str, background_tasks: BackgroundTasks, user: dict = Depends(get_current_user_with_profile)):
     valid_actions = {
         "call":     "called",
         "start":    "serving",
@@ -141,7 +143,7 @@ def update_token_status(request: Request, token_id: UUID, action: str, user: dic
     db_salon_id = user.get("db_salon_id")
 
     # Fetch the token
-    token_res = supabase_admin.table("tokens").select("customer_id, salon_id, status").eq("id", token_id).execute()
+    token_res = supabase_admin.table("tokens").select("customer_id, salon_id, status, guest_name, guest_phone, salons(name)").eq("id", token_id).execute()
     if not token_res.data:
         raise HTTPException(status_code=404, detail="Token not found")
 
@@ -202,7 +204,23 @@ def update_token_status(request: Request, token_id: UUID, action: str, user: dic
 
     updated_token = res.data[0]
 
-
+    # Trigger SMS notification if action is call
+    if action == "call":
+        salon_name = t.get("salons", {}).get("name", "the salon")
+        
+        phone_number = t.get("guest_phone")
+        first_name = t.get("guest_name", "Customer").split(" ")[0]
+        
+        # If it's a registered customer and we don't have guest_phone, fetch from profiles
+        if not phone_number and t.get("customer_id"):
+            profile_res = supabase_admin.table("profiles").select("phone, name").eq("id", t["customer_id"]).execute()
+            if profile_res.data:
+                phone_number = profile_res.data[0].get("phone")
+                first_name = profile_res.data[0].get("name", "Customer").split(" ")[0]
+        
+        if phone_number:
+            message = f"Hi {first_name}, it's your turn at {salon_name}! Please head to the counter."
+            background_tasks.add_task(send_sms_notification, phone_number, message)
 
     return updated_token
 

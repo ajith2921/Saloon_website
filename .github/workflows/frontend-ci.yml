@@ -1,0 +1,35 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'salon-frontend/**'
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - 'salon-frontend/**'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./salon-frontend
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        
+    - name: Install dependencies
+      run: npm install
+        
+    - name: Run lint
+      run: npm run lint --if-present
+        
+    - name: Build
+      run: npm run build

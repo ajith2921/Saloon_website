@@ -1,0 +1,15 @@
+name: Keep Alive Ping
+
+on:
+  schedule:
+    - cron: '*/14 * * * *' # Runs every 14 minutes
+  workflow_dispatch: # Allows manual trigger
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Backend
+        run: |
+          echo "Pinging backend to prevent cold start..."
+          curl -f -s https://saloon-website-3vjr.onrender.com/health || echo "Ping failed, but continuing"
