@@ -91,11 +91,15 @@ async def razorpay_webhook(request: Request):
 
         # 4. State Machine Transition
         if event_type == "subscription.charged":
-            # Upgrade to active
+            # Payment successful — activate the subscription
             supabase_admin.table("subscriptions").update({"status": "active"}).eq("id", sub_id).execute()
-        elif event_type in ["subscription.halted", "invoice.payment_failed"]:
+        elif event_type in ["subscription.halted", "payment.failed"]:
+            # Razorpay halts a subscription after max retries, or a payment attempt fails
             supabase_admin.table("subscriptions").update({"status": "past_due"}).eq("id", sub_id).execute()
         elif event_type == "subscription.cancelled":
+            supabase_admin.table("subscriptions").update({"status": "cancelled"}).eq("id", sub_id).execute()
+        elif event_type == "subscription.completed":
+            # All billing cycles done
             supabase_admin.table("subscriptions").update({"status": "cancelled"}).eq("id", sub_id).execute()
 
     except Exception as e:
