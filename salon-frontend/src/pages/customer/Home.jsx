@@ -3,6 +3,7 @@ import { Scissors, MapPin, Clock, Star, ArrowRight, Ticket, Shield, Zap } from '
 import { useSalons, useMyToken } from '../../hooks/useApi'
 import { useAuth } from '../../context/AuthContext'
 import { StarRating, Skeleton, TokenBadge, Card } from '../../components/ui'
+import { useTranslation } from 'react-i18next'
 
 const FEATURES = [
   { icon: Ticket, title: 'Digital Token', desc: 'Get a token from anywhere. No need to queue physically.', color: 'text-brand-400 bg-brand-500/10' },
@@ -12,6 +13,7 @@ const FEATURES = [
 ]
 
 export default function Home() {
+  const { t } = useTranslation()
   const { data: salonsData, loading: salonsLoading } = useSalons({ limit: 3, status: 'active' })
   const { user } = useAuth()
   const { data: myToken } = useMyToken(Boolean(user))
@@ -38,9 +40,9 @@ export default function Home() {
             <div className="w-full max-w-xl flex flex-col items-center animate-token-appear">
               <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-400 text-xs font-bold uppercase tracking-widest mb-6">
                 <div className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse" />
-                Live Status
+                {t('home.active_token')}
               </div>
-              <h1 className="text-sm font-semibold text-dark-100 uppercase tracking-widest mb-2">Your Token</h1>
+              <h1 className="text-sm font-semibold text-dark-100 uppercase tracking-widest mb-2">{t('home.your_token')}</h1>
               <div className="text-[6rem] sm:text-[8rem] font-display font-black text-white leading-none tracking-tighter mb-4 drop-shadow-2xl shadow-brand-500/20">
                 #{myToken.token_number}
               </div>
@@ -48,13 +50,13 @@ export default function Home() {
               
               <div className="grid grid-cols-2 gap-4 w-full mt-10">
                 <Card className="p-4 text-center">
-                  <p className="text-xs font-medium text-dark-200 uppercase tracking-wider mb-1">Queue Ahead</p>
+                  <p className="text-xs font-medium text-dark-200 uppercase tracking-wider mb-1">{t('home.queue_ahead')}</p>
                   <p className="text-3xl font-display font-bold text-white">
                     {myToken.position ? Math.max(0, myToken.position - 1) : 0}
                   </p>
                 </Card>
                 <Card className="p-4 text-center">
-                  <p className="text-xs font-medium text-dark-200 uppercase tracking-wider mb-1">Est. Wait</p>
+                  <p className="text-xs font-medium text-dark-200 uppercase tracking-wider mb-1">{t('home.est_wait')}</p>
                   <p className="text-3xl font-display font-bold text-brand-400">
                     {myToken.estimated_wait_mins ? `${myToken.estimated_wait_mins}m` : '--'}
                   </p>
@@ -74,18 +76,18 @@ export default function Home() {
               </div>
 
               <h1 className="text-3xl sm:text-6xl md:text-7xl font-display font-black text-white leading-[1.05] tracking-tight mb-6">
-                MEN'S GROOMING,<br />
+                {t('hero.title').split('.')[0]}.<br />
                 <span className="text-brand-500 inline-block relative">
-                  WITHOUT THE WAIT.
+                  {t('hero.title').split('.')[1] || ''}
                   <span className="absolute -bottom-2 left-0 w-full h-2 bg-brand-500/20 blur-sm rounded-full" />
                 </span>
               </h1>
               <p className="text-lg sm:text-xl text-dark-100 max-w-xl mx-auto leading-relaxed mb-10">
-                Get your digital token. Track your queue live. Come exactly when your turn is near.
+                {t('hero.subtitle')}
               </p>
               <div className="flex flex-col w-full sm:w-auto sm:flex-row gap-4 justify-center mb-12">
                 <Link to="/salons" className="btn-primary w-full sm:w-auto px-8 py-4 text-base shadow-glow-gold justify-center">
-                  Get Token <ArrowRight className="w-5 h-5 ml-1" />
+                  {t('hero.cta')} <ArrowRight className="w-5 h-5 ml-1" />
                 </Link>
                 <Link to="/salons" className="btn-secondary w-full sm:w-auto px-8 py-4 text-base justify-center">
                   <MapPin className="w-5 h-5 mr-2" /> Find Nearby Salons

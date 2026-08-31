@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { Globe, ChevronDown } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 export default function LanguageSwitcher() {
-  const [currentLang, setCurrentLang] = useState('en')
+  const { i18n } = useTranslation()
   const [isOpen, setIsOpen] = useState(false)
   const menuRef = useRef(null)
 
@@ -12,20 +13,9 @@ export default function LanguageSwitcher() {
     { code: 'ta', label: 'Tamil' },
   ]
 
-  // Detect the current language from the googtrans cookie on mount
-  useEffect(() => {
-    const getCookie = (name) => {
-      const match = document.cookie.match(new RegExp('(^| )' + name + '=([^;]+)'))
-      return match ? match[2] : null
-    }
-    const googtrans = getCookie('googtrans')
-    if (googtrans) {
-      const lang = googtrans.split('/').pop()
-      if (['en', 'hi', 'ta'].includes(lang)) {
-        setCurrentLang(lang)
-      }
-    }
+  const currentLang = i18n.language || 'en'
 
+  useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setIsOpen(false)
@@ -36,26 +26,8 @@ export default function LanguageSwitcher() {
   }, [])
 
   const changeLanguage = (langCode) => {
-    setCurrentLang(langCode)
+    i18n.changeLanguage(langCode)
     setIsOpen(false)
-
-    const setCookie = (name, value, days) => {
-      const d = new Date()
-      d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000))
-      document.cookie = `${name}=${value};expires=${d.toUTCString()};path=/`
-    }
-
-    if (langCode === 'en') {
-      // Clear cookie to revert to English
-      setCookie('googtrans', '', -1)
-      setCookie('googtrans', '', -1, '.vercel.app')
-      setCookie('googtrans', '', -1, '.queuecut.app') // Assuming production domain
-    } else {
-      setCookie('googtrans', `/en/${langCode}`, 30)
-    }
-
-    // Reload the page to apply the translation immediately
-    window.location.reload()
   }
 
   const currentLabel = languages.find(l => l.code === currentLang)?.label || 'English'

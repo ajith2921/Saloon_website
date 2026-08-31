@@ -5,6 +5,7 @@ import { AuthProvider } from './context/AuthContext'
 import { ToastProvider } from './context/ToastContext'
 import AppRouter from './routes/AppRouter'
 import ErrorBoundary from './components/ErrorBoundary'
+import './i18n'
 import './index.css'
 
 // Fix Leaflet default marker icons broken by Vite's asset hashing (BUG-034)
