@@ -67,7 +67,10 @@ def create_token(request: Request, token: TokenCreate, user: dict = Depends(get_
         # Handle duplicate token number from concurrent requests
         if "unique" in err_str.lower() or "duplicate" in err_str.lower():
             raise HTTPException(status_code=409, detail="Queue conflict — please try again in a moment.")
-        raise HTTPException(status_code=500, detail="Failed to generate token. Please try again.")
+            
+        import logging
+        logging.getLogger(__name__).exception("Error generating token")
+        raise HTTPException(status_code=500, detail=f"Failed to generate token: {err_str}")
 
 
 @router.get("/my")
