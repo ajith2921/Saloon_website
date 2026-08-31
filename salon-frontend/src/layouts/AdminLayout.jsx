@@ -3,6 +3,7 @@ import { useState } from 'react'
 import AdminSidebar from '../components/navigation/AdminSidebar'
 import { Bell, LayoutDashboard, Ticket, Users, Settings } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import LanguageSwitcher from '../components/LanguageSwitcher'
 
 export default function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false)
@@ -37,7 +38,8 @@ export default function AdminLayout() {
         {/* Top bar */}
         <header className="h-16 flex items-center justify-between px-6 border-b border-white/[0.06] bg-surface-primary/90 backdrop-blur sticky top-0 z-10">
           <h1 className="text-sm font-semibold text-dark-100">Admin Area</h1>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
+            <LanguageSwitcher />
             <NavLink
               to="/notifications"
               className="btn-icon relative"

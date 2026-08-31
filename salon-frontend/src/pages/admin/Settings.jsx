@@ -200,6 +200,34 @@ export default function Settings() {
             </Field>
 
             <Field label="Map Location" icon={MapPin}>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs text-dark-300">Click anywhere on the map to pin your exact location.</p>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    if (navigator.geolocation) {
+                      navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                          setForm(f => ({
+                            ...f,
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude
+                          }))
+                          success('Location updated from your GPS')
+                        },
+                        () => showError('Could not get your location. Please check your browser permissions.')
+                      )
+                    } else {
+                      showError('Geolocation is not supported by your browser')
+                    }
+                  }}
+                  className="text-xs py-1 px-3 h-8"
+                >
+                  Use My Current Location
+                </Button>
+              </div>
               <div className="h-64 rounded-xl overflow-hidden border border-white/10 relative z-0">
                 <MapContainer 
                   center={form.latitude && form.longitude ? [form.latitude, form.longitude] : [8.1833, 77.4119]} 
@@ -213,7 +241,6 @@ export default function Settings() {
                   />
                 </MapContainer>
               </div>
-              <p className="text-xs text-dark-300 mt-1">Click anywhere on the map to pin your exact location.</p>
             </Field>
           </div>
         </div>

@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { Home, Search, Clock, User, LogOut, Scissors, Bell } from 'lucide-react'
 import { useFetch } from '../hooks/useApi'
 import { Button } from '../components/ui'
+import LanguageSwitcher from '../components/LanguageSwitcher'
 
 export default function CustomerLayout() {
   const { user, profile, signOut } = useAuth()
@@ -69,6 +70,7 @@ export default function CustomerLayout() {
           </nav>
 
           <div className="flex items-center gap-4">
+            <LanguageSwitcher />
             {user ? (
               <div className="flex items-center gap-4">
                 {profile?.role === 'customer' && (
@@ -104,7 +106,7 @@ export default function CustomerLayout() {
                 </Button>
               </div>
             ) : (
-              <div className="flex gap-3">
+              <div className="flex gap-3 items-center">
                 <Link to="/login" className="btn-ghost px-5 py-2 text-sm">Login</Link>
                 <Link to="/register" className="btn-primary px-5 py-2 text-sm">Sign Up</Link>
               </div>
@@ -122,6 +124,7 @@ export default function CustomerLayout() {
           </span>
         </Link>
         <div className="flex items-center gap-3">
+          <LanguageSwitcher />
           {user ? (
             <>
             <Link
