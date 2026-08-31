@@ -9,7 +9,7 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  const fetchProfile = useCallback(async (userId) => {
+  const fetchProfile = useCallback(async (userId, retries = 3) => {
     if (!userId) { setProfile(null); return }
     const { data, error } = await supabase
       .from('profiles')
@@ -26,6 +26,11 @@ export function AuthProvider({ children }) {
           console.warn('Could not fetch salon for admin:', e)
         }
       }
+    } else if (error?.code === 'PGRST116' && retries > 0) {
+      // Profile not found yet — the DB trigger may not have fired yet (e.g. first Google OAuth login)
+      // Retry after a short delay
+      await new Promise(r => setTimeout(r, 800))
+      return fetchProfile(userId, retries - 1)
     }
   }, [])
 
