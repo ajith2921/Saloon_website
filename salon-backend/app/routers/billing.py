@@ -13,7 +13,10 @@ logger = logging.getLogger(__name__)
 # Initialize Razorpay Client lazily or handle missing keys
 def get_razorpay_client():
     if not settings.razorpay_key_id or not settings.razorpay_key_secret:
-        raise HTTPException(status_code=500, detail="Payment provider is not configured on the server.")
+        raise HTTPException(
+            status_code=503,
+            detail="Payment provider is not configured on the server. Contact the platform admin."
+        )
     return razorpay.Client(auth=(settings.razorpay_key_id, settings.razorpay_key_secret))
 
 @router.post("/checkout", response_model=BillingCheckoutResponse)
@@ -40,14 +43,21 @@ def create_checkout(
     plan = plan_resp.data[0]
     if not plan.get("is_active"):
         raise HTTPException(status_code=400, detail="Plan is no longer active.")
-    
+
+    # 3. Guard: free plans don't go through Razorpay
+    if plan.get("price", 0) == 0:
+        raise HTTPException(status_code=400, detail="Free plans do not require payment checkout.")
+
     provider_plan_id = plan.get("provider_plan_id")
     if not provider_plan_id:
-        raise HTTPException(status_code=400, detail="Plan is not mapped to the payment provider.")
+        logger.error(f"Plan {plan['id']} ({plan['name']}) has no provider_plan_id in the DB. Run migration 020.")
+        raise HTTPException(
+            status_code=400,
+            detail="Plan is not yet mapped to the payment provider. Please contact support."
+        )
 
-    # 3. Create or Fetch Billing Customer
-    cust_resp = supabase_admin.table("billing_customers").select("*").eq("salon_id", salon_id).execute()
-    # Assuming Razorpay customer ID logic here if needed, but Razorpay Subscriptions don't strictly require pre-creating a customer ID if created via direct API with limited info. But we'll leave it simple for now, or just create the subscription.
+    # 4. Billing customer lookup (reserved for future customer-level tracking)
+    supabase_admin.table("billing_customers").select("id").eq("salon_id", salon_id).execute()
     
     client = get_razorpay_client()
     try:
@@ -78,6 +88,12 @@ def create_checkout(
             amount=int(plan["price"] * 100), # Not strictly needed for Subscription checkout frontend, but returned
             currency=plan["currency"]
         )
+    except razorpay.errors.BadRequestError as e:
+        logger.error(f"Razorpay bad request: {e}")
+        raise HTTPException(status_code=400, detail=f"Payment provider rejected the request: {str(e)}")
+    except razorpay.errors.ServerError as e:
+        logger.error(f"Razorpay server error: {e}")
+        raise HTTPException(status_code=503, detail="Payment provider temporarily unavailable. Please try again.")
     except Exception as e:
-        logger.exception("Razorpay checkout error")
+        logger.exception("Razorpay checkout unexpected error")
         raise HTTPException(status_code=500, detail=f"Unable to start subscription checkout: {str(e)}")
