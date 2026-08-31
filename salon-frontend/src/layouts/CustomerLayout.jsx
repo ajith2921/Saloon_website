@@ -71,6 +71,14 @@ export default function CustomerLayout() {
           <div className="flex items-center gap-4">
             {user ? (
               <div className="flex items-center gap-4">
+                {profile?.role === 'customer' && (
+                  <Link
+                    to="/partner"
+                    className="text-sm font-medium text-brand-400 hover:text-brand-300 transition-colors hidden sm:block"
+                  >
+                    Partner with us
+                  </Link>
+                )}
                 <Link
                   to="/notifications"
                   aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
@@ -83,7 +91,7 @@ export default function CustomerLayout() {
                     </span>
                   )}
                 </Link>
-                <span className="text-sm font-medium text-dark-100">
+                <span className="text-sm font-medium text-dark-100 hidden md:block">
                   Hi, {profile?.full_name?.split(' ')[0] || 'User'}
                 </span>
                 <Button
@@ -91,7 +99,7 @@ export default function CustomerLayout() {
                   onClick={handleSignOut}
                   className="px-3 py-1.5 text-xs text-error hover:text-error hover:bg-error/10"
                 >
-                  <LogOut className="w-4 h-4 mr-1" />
+                  <LogOut className="w-4 h-4 mr-1 hidden sm:block" />
                   Logout
                 </Button>
               </div>

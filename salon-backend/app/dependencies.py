@@ -1,4 +1,4 @@
-﻿from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import jwt
 import time
@@ -41,6 +41,14 @@ def _evict_stale_profiles() -> None:
         stale = [k for k, v in _profile_cache.items() if (now - v["_ts"]) >= _PROFILE_TTL]
         for k in stale:
             del _profile_cache[k]
+
+
+def evict_profile_cache(user_id: str) -> None:
+    """Manually evict a specific user's profile from the cache.
+    Useful when a user's role or salon association is updated and needs immediate effect."""
+    with _profile_cache_lock:
+        if user_id in _profile_cache:
+            del _profile_cache[user_id]
 
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Dict[str, Any]:

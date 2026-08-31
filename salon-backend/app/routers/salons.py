@@ -185,13 +185,16 @@ def update_salon(request: Request, salon_id: UUID, updates: SalonUpdate, user: d
     return res.data[0]
 
 
+from ..dependencies import get_current_user_with_profile, require_salon_access, get_current_user, evict_profile_cache
+
 @router.post("")
 @limiter.limit("5/minute")
 def create_salon(request: Request, data: SalonUpdate, user: dict = Depends(get_current_user_with_profile)):
-    """Create a new salon and link it to the user."""
-    # Ensure only owners or admins can create salons
-    if user.get("db_role") not in ("salon_owner", "super_admin"):
-        raise HTTPException(status_code=403, detail="Only salon owners can create a salon")
+    """Create a new salon and link it to the user. Upgrades a customer to salon_owner."""
+    db_role = user.get("db_role")
+    
+    if db_role not in ("customer", "salon_owner", "super_admin"):
+        raise HTTPException(status_code=403, detail="Workers cannot create a salon")
     
     # Check if they already have a salon (usually 1 per owner)
     if user.get("db_salon_id"):
@@ -199,7 +202,10 @@ def create_salon(request: Request, data: SalonUpdate, user: dict = Depends(get_c
 
     payload = {k: v for k, v in data.model_dump().items() if v is not None}
     payload["owner_id"] = user.get("sub") or user.get("id")
-    payload["status"] = "active"
+    
+    # New salons start as pending if created by a customer/owner.
+    # Super admins can theoretically bypass this later via approve endpoint.
+    payload["status"] = "pending"
 
     # Insert into salons
     res = supabase_admin.table("salons").insert(payload).execute()
@@ -208,8 +214,15 @@ def create_salon(request: Request, data: SalonUpdate, user: dict = Depends(get_c
     
     new_salon = res.data[0]
     
-    # Link the salon to the user's profile
-    supabase_admin.table("profiles").update({"salon_id": new_salon["id"]}).eq("id", payload["owner_id"]).execute()
+    # Link the salon to the user's profile and upgrade role if customer
+    profile_update = {"salon_id": new_salon["id"]}
+    if db_role == "customer":
+        profile_update["role"] = "salon_owner"
+        
+    supabase_admin.table("profiles").update(profile_update).eq("id", payload["owner_id"]).execute()
+    
+    # Evict the cache so the next request gets the new role and salon_id immediately
+    evict_profile_cache(payload["owner_id"])
     
     return new_salon
 
