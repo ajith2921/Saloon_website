@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { Plus, Play, Check, SkipForward, RefreshCw, Volume2, UserPlus, UserCog } from 'lucide-react'
+import { Play, Check, SkipForward, RefreshCw, Volume2, UserPlus, UserCog } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../../context/AuthContext'
 import { useRealtimeQueue } from '../../hooks/useRealtime'
 import { useSalonServices, useSalonWorkers } from '../../hooks/useApi'
 import { useToast } from '../../context/ToastContext'
-import { TokenBadge, PageHeader, Card, Button, Skeleton, Modal, Input, Select } from '../../components/ui'
+import { TokenBadge, PageHeader, Card, Button, Skeleton, Modal, Select } from '../../components/ui'
 import NoSalonEmptyState from '../../components/ui/NoSalonEmptyState'
 import api from '../../lib/api'
 

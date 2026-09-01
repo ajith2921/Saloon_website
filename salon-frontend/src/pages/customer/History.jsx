@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Ticket, ArrowRight, Star, FileText } from 'lucide-react'
 import { useTokenHistory } from '../../hooks/useApi'
-import { TokenBadge, Spinner, Skeleton, EmptyState, ErrorState, Card, Button, PageHeader, Modal } from '../../components/ui'
+import { TokenBadge, Skeleton, EmptyState, ErrorState, Card, Button, PageHeader, Modal } from '../../components/ui'
 
 function formatDate(d) {
   return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })

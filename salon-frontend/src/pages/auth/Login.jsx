@@ -69,7 +69,7 @@ export default function Login() {
               try {
                 setLoading(true)
                 await signInWithGoogle()
-              } catch (err) {
+              } catch {
                 showError('Could not sign in with Google.')
                 setLoading(false)
               }

@@ -114,7 +114,7 @@ export default function Register() {
               try {
                 setLoading(true)
                 await signInWithGoogle()
-              } catch (err) {
+              } catch {
                 showError('Could not sign in with Google.')
                 setLoading(false)
               }

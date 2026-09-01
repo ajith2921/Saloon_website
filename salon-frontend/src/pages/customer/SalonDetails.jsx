@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import { useSalon, useSalonServices, useSalonWorkers, useFetch } from '../../hooks/useApi'
 import { useRealtimeQueue } from '../../hooks/useRealtime'
-import { StarRating, EmptyState, Skeleton, Card, Button, TokenBadge } from '../../components/ui'
+import { StarRating, EmptyState, Skeleton, Card, Button } from '../../components/ui'
 import { useAuth } from '../../context/AuthContext'
 import { useTranslation } from 'react-i18next'
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'

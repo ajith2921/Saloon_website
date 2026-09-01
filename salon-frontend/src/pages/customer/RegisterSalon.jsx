@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Store, MapPin, Building2, Phone } from 'lucide-react'
-import { Card, Input, Button, PageHeader } from '../../components/ui'
+import { Card, Input, Button } from '../../components/ui'
 import { useToast } from '../../context/ToastContext'
 import { useAuth } from '../../context/AuthContext'
 import api from '../../lib/api'

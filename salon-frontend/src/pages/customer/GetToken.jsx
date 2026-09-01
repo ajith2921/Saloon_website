@@ -4,7 +4,7 @@ import { Scissors, Clock, ArrowRight, ChevronLeft, AlertCircle, CheckCircle } fr
 import { useSalon, useSalonServices, useSalonWorkers } from '../../hooks/useApi'
 import { useRealtimeQueue } from '../../hooks/useRealtime'
 import { useToast } from '../../context/ToastContext'
-import { EmptyState, Card, Button } from '../../components/ui'
+import { Card, Button } from '../../components/ui'
 import api from '../../lib/api'
 
 export default function GetToken() {
@@ -14,7 +14,7 @@ export default function GetToken() {
   const { data: salon }          = useSalon(salonId)
   const { data: servicesData }   = useSalonServices(salonId)
   const { data: workersData }    = useSalonWorkers(salonId)
-  const { waitingTokens, currentToken } = useRealtimeQueue(salonId)
+  const { waitingTokens } = useRealtimeQueue(salonId)
 
   const [selectedService, setSelectedService] = useState(null)
   const [selectedWorker,  setSelectedWorker]  = useState(null)

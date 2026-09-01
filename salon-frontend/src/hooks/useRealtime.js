@@ -65,7 +65,7 @@ export function useRealtimeQueue(salonId, onTokenChange, adminMode = false) {
           refetch()
         }
       })
-      .subscribe((status, err) => {
+      .subscribe((status, _err) => {
         if (status === 'SUBSCRIBED') {
           // Fetch immediately on connect/reconnect to capture missed events
           refetch()
