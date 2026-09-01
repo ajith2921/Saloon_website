@@ -7,7 +7,7 @@ import {
 import { useMyToken } from '../../hooks/useApi'
 import { useRealtimeToken, useRealtimeQueue } from '../../hooks/useRealtime'
 import { useToast } from '../../context/ToastContext'
-import { TokenBadge, Spinner, EmptyState, ConfirmModal, Card, Button, PageHeader } from '../../components/ui'
+import { TokenBadge, Spinner, Skeleton, EmptyState, ConfirmModal, Card, Button, PageHeader } from '../../components/ui'
 import api from '../../lib/api'
 
 const STATUS_CONFIG = {
@@ -93,8 +93,13 @@ export default function MyToken() {
   }
 
   if (loading) return (
-    <div className="flex items-center justify-center min-h-[60vh]">
-      <Spinner size="lg" />
+    <div className="container-app max-w-md mx-auto py-8">
+      <div className="flex justify-between items-center mb-6">
+        <Skeleton className="h-8 w-32" />
+        <Skeleton className="h-10 w-10 rounded-xl" />
+      </div>
+      <Skeleton className="h-64 w-full rounded-2xl mb-6" />
+      <Skeleton className="h-12 w-full rounded-xl" />
     </div>
   )
 

@@ -1,24 +1,25 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { ProtectedRoute, GuestRoute } from './guards'
 import LoadingScreen from '../components/ui/LoadingScreen'
+import { useToast } from '../context/ToastContext'
 
 // Layouts — always eagerly loaded (thin wrappers, no heavy deps)
 import CustomerLayout from '../layouts/CustomerLayout'
 import AdminLayout    from '../layouts/AdminLayout'
 import SuperAdminLayout from '../layouts/SuperAdminLayout'
 
-// Auth pages — small, eagerly loaded (hit on every cold start)
-import Login    from '../pages/auth/Login'
-import Register from '../pages/auth/Register'
-import ResetPassword from '../pages/auth/ResetPassword'
+// Auth pages — lazy loaded to reduce bundle size
+const Login           = lazy(() => import('../pages/auth/Login'))
+const Register        = lazy(() => import('../pages/auth/Register'))
+const ResetPassword   = lazy(() => import('../pages/auth/ResetPassword'))
 
 // ─── Customer pages ───────────────────────────────────────────────────────────
-// Home, FindSalons, SalonDetails are the most commonly visited on cold start.
-// Keep them eager so the majority of customers never see a lazy-loading flash.
+// Home is the most commonly visited on cold start. Keep it eager.
 import Home         from '../pages/customer/Home'
-import FindSalons   from '../pages/customer/FindSalons'
-import SalonDetails from '../pages/customer/SalonDetails'
+
+const FindSalons    = lazy(() => import('../pages/customer/FindSalons'))
+const SalonDetails  = lazy(() => import('../pages/customer/SalonDetails'))
 
 // Less-frequently visited customer pages — lazy-loaded.
 const GetToken      = lazy(() => import('../pages/customer/GetToken'))
@@ -65,20 +66,50 @@ function PageLoader() {
   return <LoadingScreen />
 }
 
+function ColdStartListener() {
+  const { info, dismiss } = useToast()
+  
+  useEffect(() => {
+    let toastId = null;
+    
+    const onColdStart = () => {
+      toastId = info('Waking up the server... This might take a few seconds.', 'Connecting', { autoClose: false });
+    };
+    
+    const onResolved = () => {
+      if (toastId) dismiss(toastId);
+    };
+
+    window.addEventListener('api-cold-start', onColdStart);
+    window.addEventListener('api-cold-start-resolved', onResolved);
+    
+    return () => {
+      window.removeEventListener('api-cold-start', onColdStart);
+      window.removeEventListener('api-cold-start-resolved', onResolved);
+    };
+  }, [info, dismiss]);
+  
+  return null;
+}
+
 export default function AppRouter() {
   return (
-    <Routes>
+    <>
+      <ColdStartListener />
+      <Routes>
       {/* ─── Auth ─── */}
-      <Route path="/login"    element={<GuestRoute><Login /></GuestRoute>} />
-      <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
-      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/login"    element={<GuestRoute><Suspense fallback={<PageLoader />}><Login /></Suspense></GuestRoute>} />
+      <Route path="/register" element={<GuestRoute><Suspense fallback={<PageLoader />}><Register /></Suspense></GuestRoute>} />
+      <Route path="/reset-password" element={<Suspense fallback={<PageLoader />}><ResetPassword /></Suspense>} />
 
       {/* ─── Customer (public + auth) ─── */}
       <Route element={<CustomerLayout />}>
         {/* Eagerly loaded — critical path for every visitor */}
         <Route index               element={<Home />} />
-        <Route path="/salons"      element={<FindSalons />} />
-        <Route path="/salons/:salonId" element={<SalonDetails />} />
+        
+        {/* Public lazy */}
+        <Route path="/salons"      element={<Suspense fallback={<PageLoader />}><FindSalons /></Suspense>} />
+        <Route path="/salons/:salonId" element={<Suspense fallback={<PageLoader />}><SalonDetails /></Suspense>} />
 
         {/* Public lazy */}
         <Route path="/queue/:salonId" element={
@@ -209,5 +240,6 @@ export default function AppRouter() {
       {/* ─── Catch-all ─── */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   )
 }

@@ -25,6 +25,7 @@ export default function Register() {
     confirmPassword: '',
   })
   const [showPass, setShowPass] = useState(false)
+  const [showEmailForm, setShowEmailForm] = useState(false)
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState({})
 
@@ -98,105 +99,9 @@ export default function Register() {
 
         {/* Form */}
         <Card>
-          <div className="mb-6 text-center md:text-left">
-            <h1 className="text-xl font-bold text-white">Create your account</h1>
-            <p className="text-dark-100 text-sm mt-0.5">It's free — no credit card required</p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
-            <Input
-              id="fullName"
-              type="text"
-              label="Full name"
-              icon={User}
-              autoComplete="name"
-              placeholder="Your full name"
-              value={form.fullName}
-              onChange={set('fullName')}
-              error={errors.fullName}
-            />
-
-            <Input
-              id="reg-email"
-              type="email"
-              label="Email address"
-              icon={Mail}
-              autoComplete="email"
-              placeholder="you@example.com"
-              value={form.email}
-              onChange={set('email')}
-              error={errors.email}
-            />
-
-            <Input
-              id="phone"
-              type="tel"
-              label="Phone number"
-              icon={Phone}
-              autoComplete="tel"
-              placeholder="+91 98765 43210"
-              value={form.phone}
-              onChange={set('phone')}
-              error={errors.phone}
-            />
-
-            <div className="relative">
-              <Input
-                id="reg-password"
-                type={showPass ? 'text' : 'password'}
-                label="Password"
-                icon={Lock}
-                autoComplete="new-password"
-                placeholder="At least 8 characters"
-                value={form.password}
-                onChange={set('password')}
-                error={errors.password}
-                className="pr-10"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPass(!showPass)}
-                className="absolute right-3 top-[38px] text-dark-200 hover:text-white transition-colors"
-                aria-label={showPass ? 'Hide password' : 'Show password'}
-              >
-                {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-
-            <Input
-              id="confirmPassword"
-              type="password"
-              label="Confirm password"
-              icon={Lock}
-              autoComplete="new-password"
-              placeholder="Repeat your password"
-              value={form.confirmPassword}
-              onChange={set('confirmPassword')}
-              error={errors.confirmPassword}
-            />
-
-            <p className="text-xs text-dark-200">
-              By registering you agree to our Terms of Service and Privacy Policy.
-            </p>
-
-            <Button
-              type="submit"
-              id="btn-register"
-              loading={loading}
-              fullWidth
-              className="mt-2"
-            >
-              Create Account <ArrowRight className="w-4 h-4" />
-            </Button>
-          </form>
-
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-white/[0.08]"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-surface-secondary text-dark-200">Or continue with</span>
-            </div>
+          <div className="mb-8 text-center">
+            <h1 className="text-2xl font-display font-bold text-white mb-2">Create your account</h1>
+            <p className="text-dark-100 text-sm">Join thousands of customers saving time</p>
           </div>
 
           <Button
@@ -213,7 +118,7 @@ export default function Register() {
               }
             }}
             disabled={loading}
-            className="flex items-center justify-center gap-3 bg-white hover:bg-gray-100 text-gray-900 border-transparent shadow-sm mb-5"
+            className="flex items-center justify-center gap-3 bg-white hover:bg-gray-100 text-gray-900 border-transparent shadow-glow-sm py-4 mb-6 transition-transform hover:-translate-y-1"
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -221,10 +126,124 @@ export default function Register() {
               <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
             </svg>
-            <span className="font-medium">Sign up with Google</span>
+            <span className="font-bold text-[15px]">Continue with Google</span>
           </Button>
 
-          <div className="text-center">
+          {!showEmailForm ? (
+            <div className="text-center animate-fade-in">
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-white/[0.08]"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-surface-secondary text-dark-200">Or</span>
+                </div>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setShowEmailForm(true)}
+                className="text-dark-100 hover:text-white text-sm font-medium transition-colors"
+              >
+                Sign up with email instead
+              </button>
+            </div>
+          ) : (
+            <div className="animate-fade-in">
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-white/[0.08]"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-surface-secondary text-dark-200">Sign up with email</span>
+                </div>
+              </div>
+
+              <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+                <Input
+                  id="fullName"
+                  type="text"
+                  label="Full name"
+                  icon={User}
+                  autoComplete="name"
+                  placeholder="Your full name"
+                  value={form.fullName}
+                  onChange={set('fullName')}
+                  error={errors.fullName}
+                />
+
+                <Input
+                  id="reg-email"
+                  type="email"
+                  label="Email address"
+                  icon={Mail}
+                  autoComplete="email"
+                  placeholder="you@example.com"
+                  value={form.email}
+                  onChange={set('email')}
+                  error={errors.email}
+                />
+
+                <Input
+                  id="phone"
+                  type="tel"
+                  label="Phone number"
+                  icon={Phone}
+                  autoComplete="tel"
+                  placeholder="+91 98765 43210"
+                  value={form.phone}
+                  onChange={set('phone')}
+                  error={errors.phone}
+                />
+
+                <div className="relative">
+                  <Input
+                    id="reg-password"
+                    type={showPass ? 'text' : 'password'}
+                    label="Password"
+                    icon={Lock}
+                    autoComplete="new-password"
+                    placeholder="At least 8 characters"
+                    value={form.password}
+                    onChange={set('password')}
+                    error={errors.password}
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPass(!showPass)}
+                    className="absolute right-3 top-[38px] text-dark-200 hover:text-white transition-colors"
+                    aria-label={showPass ? 'Hide password' : 'Show password'}
+                  >
+                    {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  label="Confirm password"
+                  icon={Lock}
+                  autoComplete="new-password"
+                  placeholder="Repeat your password"
+                  value={form.confirmPassword}
+                  onChange={set('confirmPassword')}
+                  error={errors.confirmPassword}
+                />
+
+                <Button
+                  type="submit"
+                  id="btn-register"
+                  loading={loading}
+                  fullWidth
+                  className="mt-4"
+                >
+                  Create Account <ArrowRight className="w-4 h-4 ml-1" />
+                </Button>
+              </form>
+            </div>
+          )}
+
+          <div className="text-center mt-8 pt-6 border-t border-white/5">
             <p className="text-sm text-dark-100">
               Already have an account?{' '}
               <Link to="/login" className="text-brand-400 hover:text-brand-300 font-medium transition-colors">

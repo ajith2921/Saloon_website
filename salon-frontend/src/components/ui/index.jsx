@@ -25,15 +25,15 @@ export function Spinner({ size = 'md', className = '', label = 'Loading…' }) {
  */
 export function EmptyState({ icon: Icon, title, description, action }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+    <div className="flex flex-col items-center justify-center py-16 px-6 text-center animate-fade-in">
       {Icon && (
-        <div className="w-16 h-16 rounded-2xl bg-surface-tertiary border border-white/10 flex items-center justify-center mb-4">
-          <Icon className="w-8 h-8 text-dark-200" />
+        <div className="w-20 h-20 rounded-full bg-brand-500/10 border border-brand-500/20 flex items-center justify-center mb-6 shadow-glow-sm">
+          <Icon className="w-10 h-10 text-brand-400" />
         </div>
       )}
-      <h3 className="text-lg font-semibold text-white mb-1">{title}</h3>
-      {description && <p className="text-dark-100 text-sm max-w-xs">{description}</p>}
-      {action && <div className="mt-5">{action}</div>}
+      <h3 className="text-xl font-display font-bold text-white mb-2 tracking-tight">{title}</h3>
+      {description && <p className="text-dark-100 text-[15px] max-w-sm leading-relaxed">{description}</p>}
+      {action && <div className="mt-8 transition-transform hover:-translate-y-0.5">{action}</div>}
     </div>
   )
 }

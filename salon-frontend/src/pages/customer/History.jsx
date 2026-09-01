@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Ticket, ArrowRight, Star } from 'lucide-react'
 import { useTokenHistory } from '../../hooks/useApi'
-import { TokenBadge, Spinner, EmptyState, ErrorState, Card, Button, PageHeader } from '../../components/ui'
+import { TokenBadge, Spinner, Skeleton, EmptyState, ErrorState, Card, Button, PageHeader } from '../../components/ui'
 
 function formatDate(d) {
   return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -15,7 +15,13 @@ export default function History() {
     <div className="container-app max-w-2xl mx-auto py-8">
       <PageHeader title="Visit History" />
 
-      {loading && <div className="flex justify-center py-16"><Spinner size="lg" /></div>}
+      {loading && (
+        <div className="flex flex-col gap-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 w-full rounded-2xl" />
+          ))}
+        </div>
+      )}
 
       {!loading && error && (
         <ErrorState

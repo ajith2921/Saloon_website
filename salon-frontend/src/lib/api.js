@@ -15,13 +15,26 @@ api.interceptors.request.use(async (config) => {
   if (session?.access_token) {
     config.headers.Authorization = `Bearer ${session.access_token}`
   }
+  
+  // Start a timer for cold-starts
+  config.coldStartTimer = setTimeout(() => {
+    window.dispatchEvent(new CustomEvent('api-cold-start'));
+  }, 3000);
+  
   return config
 })
 
 // Global error handler
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    if (response.config?.coldStartTimer) clearTimeout(response.config.coldStartTimer);
+    window.dispatchEvent(new CustomEvent('api-cold-start-resolved'));
+    return response;
+  },
   async (error) => {
+    if (error.config?.coldStartTimer) clearTimeout(error.config.coldStartTimer);
+    window.dispatchEvent(new CustomEvent('api-cold-start-resolved'));
+    
     const status = error.response?.status
 
     // On 401, the session is invalid/expired — sign out and redirect to login.
