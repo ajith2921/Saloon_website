@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Scissors, Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { Button, Input, Card } from '../../components/ui'
 import { supabase } from '../../lib/supabase'
 
 export default function Login() {
-  const { signIn } = useAuth()
+  const { t } = useTranslation()
+  const { signIn, signInWithGoogle } = useAuth()
   const { success, error: showError } = useToast()
   const navigate = useNavigate()
   const location = useLocation()
@@ -54,7 +56,7 @@ export default function Login() {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-brand shadow-glow-gold mb-4">
             <Scissors className="w-8 h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-white">Welcome back</h1>
+          <h1 className="text-2xl font-bold text-white">{t('auth.welcome_back')}</h1>
           <p className="text-dark-100 text-sm mt-1">Sign in to your QueueCut account</p>
         </div>
 
@@ -81,7 +83,7 @@ export default function Login() {
               <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
             </svg>
-            <span className="font-bold text-[15px]">Continue with Google</span>
+            <span className="font-bold text-[15px]">{t('auth.continue_google')}</span>
           </Button>
 
           {!showEmailForm ? (
@@ -91,7 +93,7 @@ export default function Login() {
                   <div className="w-full border-t border-white/[0.08]"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-surface-secondary text-dark-200">Or</span>
+                  <span className="px-2 bg-surface-secondary text-dark-200">{t('auth.or')}</span>
                 </div>
               </div>
               <button 
@@ -99,7 +101,7 @@ export default function Login() {
                 onClick={() => setShowEmailForm(true)}
                 className="text-dark-100 hover:text-white text-sm font-medium transition-colors"
               >
-                Sign in with email instead
+                {t('auth.sign_in_email')}
               </button>
             </div>
           ) : (
@@ -109,7 +111,7 @@ export default function Login() {
                   <div className="w-full border-t border-white/[0.08]"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-surface-secondary text-dark-200">Sign in with email</span>
+                  <span className="px-2 bg-surface-secondary text-dark-200">{t('auth.sign_in_email')}</span>
                 </div>
               </div>
 
@@ -118,7 +120,7 @@ export default function Login() {
                 <Input
                   id="email"
                   type="email"
-                  label="Email address"
+                  label={t('auth.email')}
                   icon={Mail}
                   autoComplete="email"
                   placeholder="you@example.com"
@@ -133,7 +135,7 @@ export default function Login() {
                     <Input
                       id="password"
                       type={showPass ? 'text' : 'password'}
-                      label="Password"
+                      label={t('auth.password')}
                       icon={Lock}
                       autoComplete="current-password"
                       placeholder="Enter your password"
@@ -165,7 +167,7 @@ export default function Login() {
                       }}
                       className="shrink-0 whitespace-nowrap text-brand-400 hover:text-brand-300 text-sm font-medium transition-colors"
                     >
-                      Forgot password?
+                      {t('auth.forgot_password')}
                     </button>
                   </div>
                 </div>
@@ -177,7 +179,7 @@ export default function Login() {
                   fullWidth
                   className="mt-2"
                 >
-                  Sign In <ArrowRight className="w-4 h-4 ml-1" />
+                  {t('auth.sign_in_btn')} <ArrowRight className="w-4 h-4 ml-1" />
                 </Button>
               </form>
             </div>
@@ -185,9 +187,9 @@ export default function Login() {
 
           <div className="text-center">
             <p className="text-sm text-dark-100">
-              Don't have an account?{' '}
+              {t('auth.no_account')}{' '}
               <Link to="/register" className="text-brand-400 hover:text-brand-300 font-medium transition-colors">
-                Create account
+                {t('auth.create_account_btn')}
               </Link>
             </p>
           </div>
