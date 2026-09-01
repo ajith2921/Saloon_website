@@ -116,11 +116,11 @@ export default function Home() {
       <section className="container-app">
         <div className="flex items-end justify-between mb-8">
           <div>
-            <h2 className="text-2xl sm:text-3xl font-display font-bold text-white mb-1">Live Salons</h2>
+            <h2 className="text-2xl sm:text-3xl font-display font-bold text-white mb-1">{t('home.featured')}</h2>
             <p className="text-dark-100 text-sm">Join the queue at top-rated barbers near you.</p>
           </div>
           <Link to="/salons" className="btn-ghost hidden sm:flex">
-            View All <ArrowRight className="w-4 h-4 ml-1" />
+            {t('home.view_all')} <ArrowRight className="w-4 h-4 ml-1" />
           </Link>
         </div>
 
@@ -141,7 +141,7 @@ export default function Home() {
         </div>
         
         <Link to="/salons" className="btn-secondary w-full justify-center mt-6 sm:hidden">
-          View All Salons
+          {t('home.view_all')}
         </Link>
       </section>
 
@@ -180,6 +180,7 @@ export default function Home() {
 }
 
 function SalonCard({ salon }) {
+  const { t } = useTranslation()
   const isOpen = () => {
     if (salon.status !== 'active') return false
     const now = new Date()
@@ -212,7 +213,7 @@ function SalonCard({ salon }) {
         </div>
         <div className="absolute top-3 right-3">
            <span className={open ? 'badge bg-success/20 text-success border border-success/20 backdrop-blur-md' : 'badge bg-dark-400/50 text-white backdrop-blur-md'}>
-             {open ? 'Open' : 'Closed'}
+             {open ? t('findSalons.open_now') : t('findSalons.closed')}
            </span>
         </div>
       </div>
@@ -224,14 +225,14 @@ function SalonCard({ salon }) {
             <p className="font-display font-bold text-white text-xl leading-none">{salon.queue_count ?? 0}</p>
           </div>
           <div className="bg-brand-500/5 border border-brand-500/10 rounded-xl p-3 text-center">
-            <p className="text-[10px] font-semibold text-dark-200 uppercase tracking-wider mb-1">Est. Wait</p>
+            <p className="text-[10px] font-semibold text-dark-200 uppercase tracking-wider mb-1">{t('home.est_wait')}</p>
             <p className="font-display font-bold text-brand-400 text-xl leading-none">
               {salon.queue_count ? `${salon.queue_count * (salon.avg_service_minutes ?? 30)}m` : '0m'}
             </p>
           </div>
         </div>
         <Link to={`/salons/${salon.id}`} className="btn-secondary w-full justify-center mt-auto">
-          Get Token
+          {t('salonDetails.get_token')}
         </Link>
       </div>
     </Card>

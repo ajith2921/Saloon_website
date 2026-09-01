@@ -9,13 +9,15 @@ import 'leaflet/dist/leaflet.css'
 import { useSalons } from '../../hooks/useApi'
 import { StarRating, EmptyState, Skeleton, Button, Input, Select, Card, PageHeader } from '../../components/ui'
 
-const SORT_OPTIONS = [
-  { value: 'rating', label: 'Highest Rated' },
-  { value: 'queue',  label: 'Shortest Queue' },
-  { value: 'dist',   label: 'Nearest' },
+import { useTranslation } from 'react-i18next'
+
+const SORT_OPTIONS = (t) => [
+  { value: 'rating', label: t('findSalons.highest_rated') },
+  { value: 'queue',  label: t('findSalons.shortest_queue') },
+  { value: 'dist',   label: t('findSalons.nearest') },
 ]
 
-function SalonCard({ salon }) {
+function SalonCard({ salon, t }) {
   const now = new Date()
   const [oh, om] = (salon.opening_time ?? '09:00').split(':').map(Number)
   const [ch, cm] = (salon.closing_time ?? '21:00').split(':').map(Number)
@@ -36,7 +38,7 @@ function SalonCard({ salon }) {
         )}
         <div className="absolute top-3 left-3">
           <span className={isOpen ? 'badge bg-success/20 text-success border border-success/20 backdrop-blur-md' : 'badge bg-dark-400/50 text-white backdrop-blur-md'}>
-            {isOpen ? 'Open Now' : 'Closed'}
+            {isOpen ? t('findSalons.open_now') : t('findSalons.closed')}
           </span>
         </div>
       </div>
@@ -84,7 +86,7 @@ function SalonCard({ salon }) {
             <div className="flex items-center gap-2 bg-brand-500/5 border border-brand-500/10 rounded-lg px-3 py-2">
               <Clock className="w-4 h-4 text-brand-400" />
               <div className="flex flex-col">
-                <span className="text-[10px] font-semibold text-dark-200 uppercase tracking-wider leading-none">Est. Wait</span>
+                <span className="text-[10px] font-semibold text-dark-200 uppercase tracking-wider leading-none">{t('findSalons.est_wait', 'Est. Wait')}</span>
                 <span className="text-lg font-display font-bold text-brand-400 leading-none mt-0.5">
                   {waitMins === 0 ? '0m' : `~${waitMins}m`}
                 </span>
@@ -96,11 +98,11 @@ function SalonCard({ salon }) {
         {/* Actions */}
         <div className="flex gap-2 mt-4">
           <Link to={`/salons/${salon.id}`} className="flex-1">
-            <Button variant="secondary" fullWidth className="text-sm">View Salon</Button>
+            <Button variant="secondary" fullWidth className="text-sm">{t('findSalons.view_salon', 'View Salon')}</Button>
           </Link>
           {isOpen && (
             <Link to={`/salons/${salon.id}/token`} className="flex-1">
-              <Button fullWidth className="text-sm"><Ticket2 className="w-4 h-4" /> Get Token</Button>
+              <Button fullWidth className="text-sm"><Ticket2 className="w-4 h-4" /> {t('findSalons.get_token', 'Get Token')}</Button>
             </Link>
           )}
         </div>
@@ -114,6 +116,7 @@ function Ticket2(props) {
 }
 
 export default function FindSalons() {
+  const { t } = useTranslation()
   const [search, setSearch]   = useState('')
   const [sortBy, setSortBy]   = useState('rating')
   const [onlyOpen, setOnlyOpen] = useState(false)
@@ -155,10 +158,10 @@ export default function FindSalons() {
   return (
     <div className="container-app py-8">
       <PageHeader 
-        title="Find Your Salon" 
+        title={t('findSalons.title', 'Find Your Salon')}
         subtitle={allSalons.length > 0
-          ? `${allSalons.length} salons available · Choose by rating, queue, or distance`
-          : 'Discover nearby men\'s salons'} 
+          ? `${allSalons.length} ${t('findSalons.salons_available', 'salons available · Choose by rating, queue, or distance')}`
+          : t('findSalons.discover_nearby', 'Discover nearby men\'s salons')} 
       />
 
       {/* Search + Filters */}
@@ -168,7 +171,7 @@ export default function FindSalons() {
             id="salon-search"
             type="text"
             icon={Search}
-            placeholder="Search by salon name or city…"
+            placeholder={t('findSalons.search_placeholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pr-10"
@@ -190,7 +193,7 @@ export default function FindSalons() {
           onChange={(e) => setSortBy(e.target.value)}
           wrapperClassName="w-full sm:w-auto min-w-[160px]"
         >
-          {SORT_OPTIONS.map((o) => (
+          {SORT_OPTIONS(t).map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </Select>
@@ -201,7 +204,7 @@ export default function FindSalons() {
           className={`whitespace-nowrap ${onlyOpen ? 'border-brand-500/40 text-brand-400' : ''}`}
         >
           <SlidersHorizontal className="w-4 h-4" />
-          {onlyOpen ? 'Open Now ✓' : 'Filter'}
+          {onlyOpen ? t('findSalons.open_now_checked', 'Open Now ✓') : t('findSalons.filter', 'Filter')}
         </Button>
 
         <Button 
@@ -210,10 +213,10 @@ export default function FindSalons() {
           className={`whitespace-nowrap ${showMap ? 'border-brand-500/40 text-brand-400' : ''}`}
         >
           <Map className="w-4 h-4" />
-          {showMap ? 'Hide Map' : 'Show Map'}
+          {showMap ? t('findSalons.hide_map', 'Hide Map') : t('findSalons.show_map', 'Show Map')}
         </Button>
 
-        <Button variant="icon" onClick={refetch} title="Refresh">
+        <Button variant="icon" onClick={refetch} title={t('common.refresh', 'Refresh')}>
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
         </Button>
       </div>
@@ -230,7 +233,7 @@ export default function FindSalons() {
                     <strong className="block mb-1">{s.name}</strong>
                     <span className="text-sm text-dark-300 block mb-2">{s.address ?? s.city}</span>
                     <Link to={`/salons/${s.id}`} className="bg-brand-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold inline-block hover:bg-brand-600">
-                      View Salon
+                      {t('findSalons.view_salon', 'View Salon')}
                     </Link>
                   </div>
                 </Popup>
@@ -251,19 +254,19 @@ export default function FindSalons() {
 
       {!loading && error && (
         <Card className="text-center p-8">
-          <p className="text-red-400 font-medium">Failed to load salons</p>
+          <p className="text-red-400 font-medium">{t('findSalons.failed_load', 'Failed to load salons')}</p>
           <p className="text-dark-100 text-sm mt-1">{error}</p>
-          <Button variant="secondary" onClick={refetch} className="mt-4">Try Again</Button>
+          <Button variant="secondary" onClick={refetch} className="mt-4">{t('common.try_again', 'Try Again')}</Button>
         </Card>
       )}
 
       {!loading && !error && filtered.length === 0 && (
         <EmptyState
           icon={Scissors}
-          title="No salons found"
-          description={search ? `No results for "${search}"` : 'No salons available right now. Check back soon.'}
+          title={t('findSalons.no_salons', 'No salons found')}
+          description={search ? t('findSalons.no_results', `No results for "${search}"`) : t('findSalons.no_salons_available', 'No salons available right now. Check back soon.')}
           action={search && (
-            <Button variant="secondary" onClick={() => setSearch('')}>Clear Search</Button>
+            <Button variant="secondary" onClick={() => setSearch('')}>{t('common.clear_search', 'Clear Search')}</Button>
           )}
         />
       )}
@@ -271,11 +274,11 @@ export default function FindSalons() {
       {!loading && !error && filtered.length > 0 && (
         <>
           <p className="text-sm text-dark-200 mb-4">
-            {filtered.length} salon{filtered.length !== 1 ? 's' : ''} found
+            {t('findSalons.results_found', `${filtered.length} salons found`)}
           </p>
           <div className="flex flex-col gap-4">
             {filtered.map((salon) => (
-              <SalonCard key={salon.id} salon={salon} />
+              <SalonCard key={salon.id} salon={salon} t={t} />
             ))}
           </div>
         </>
@@ -283,4 +286,3 @@ export default function FindSalons() {
     </div>
   )
 }
-

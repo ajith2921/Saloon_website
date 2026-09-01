@@ -5,8 +5,9 @@ import {
 } from 'lucide-react'
 import { useSalon, useSalonServices, useSalonWorkers, useFetch } from '../../hooks/useApi'
 import { useRealtimeQueue } from '../../hooks/useRealtime'
-import { StarRating, EmptyState, Skeleton, Card, Button } from '../../components/ui'
+import { StarRating, EmptyState, Skeleton, Card, Button, TokenBadge } from '../../components/ui'
 import { useAuth } from '../../context/AuthContext'
+import { useTranslation } from 'react-i18next'
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import L from 'leaflet'
@@ -17,6 +18,7 @@ delete L.Icon.Default.prototype._getIconUrl
 L.Icon.Default.mergeOptions({ iconUrl, shadowUrl })
 
 export default function SalonDetails() {
+  const { t } = useTranslation()
   const { salonId } = useParams()
   const { user } = useAuth()
 
@@ -247,7 +249,7 @@ export default function SalonDetails() {
             {latestReviews.length > 0 && (
               <Card className="p-5 mt-5">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-display font-bold text-white">Latest Reviews</h2>
+                  <h2 className="text-xl font-display font-bold text-white">{t('salonDetails.latest_reviews', 'Latest Reviews')}</h2>
                   <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-400">
                     <Star className="w-4 h-4 fill-amber-400" />
                     <span className="font-bold text-sm">{salon.avg_rating}</span>
@@ -280,7 +282,7 @@ export default function SalonDetails() {
             {/* Live queue card */}
             <Card className="p-6 border-2 border-brand-500/20 shadow-glow-sm bg-gradient-card">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-display font-bold text-white uppercase tracking-wider">Live Queue</h2>
+                <h2 className="text-2xl font-display font-bold text-white uppercase tracking-wider">{t('salonDetails.live_queue', 'Live Queue')}</h2>
                 <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-success/10 border border-success/20">
                   <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
                   <span className="text-xs font-bold text-success uppercase tracking-widest">Live</span>
@@ -289,7 +291,7 @@ export default function SalonDetails() {
 
               <div className="flex flex-col gap-4 mb-6">
                 <div className="bg-surface-primary/60 border border-white/5 rounded-2xl p-4 text-center">
-                  <p className="text-[10px] font-semibold text-dark-200 uppercase tracking-widest mb-1">Now Serving</p>
+                  <p className="text-[10px] font-semibold text-dark-200 uppercase tracking-widest mb-1">{t('salonDetails.now_serving', 'Now Serving')}</p>
                   <p className="text-5xl font-display font-bold text-white leading-none">
                     {currentToken ? `#${currentToken.token_number}` : '—'}
                   </p>
@@ -297,11 +299,11 @@ export default function SalonDetails() {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-surface-primary/60 border border-white/5 rounded-2xl p-4 text-center">
-                    <p className="text-[10px] font-semibold text-dark-200 uppercase tracking-widest mb-1">Waiting</p>
+                    <p className="text-[10px] font-semibold text-dark-200 uppercase tracking-widest mb-1">{t('salonDetails.waiting', 'Waiting')}</p>
                     <p className="text-3xl font-display font-bold text-white leading-none">{waitingTokens.length}</p>
                   </div>
                   <div className="bg-brand-500/5 border border-brand-500/10 rounded-2xl p-4 text-center">
-                    <p className="text-[10px] font-semibold text-dark-200 uppercase tracking-widest mb-1">Est. Wait</p>
+                    <p className="text-[10px] font-semibold text-dark-200 uppercase tracking-widest mb-1">{t('salonDetails.est_wait', 'Est. Wait')}</p>
                     <p className="text-3xl font-display font-bold text-brand-400 leading-none">
                       {waitMins === 0 ? '0m' : `~${waitMins}m`}
                     </p>
@@ -311,13 +313,13 @@ export default function SalonDetails() {
 
               {isOpen ? (
                 <Link to={user ? `/salons/${salonId}/token` : '/login'} className="block w-full">
-                  <Button fullWidth>Get Token <ArrowRight className="w-4 h-4 ml-1" /></Button>
+                  <Button fullWidth>{t('salonDetails.get_token', 'Get Token')} <ArrowRight className="w-4 h-4 ml-1" /></Button>
                 </Link>
               ) : (
                 <div className="bg-surface-tertiary rounded-xl p-3 text-center border border-white/5">
-                  <p className="text-dark-100 text-sm font-medium">Salon is currently closed</p>
+                  <p className="text-dark-100 text-sm font-medium">{t('salonDetails.salon_closed', 'Salon is currently closed')}</p>
                   <p className="text-xs text-dark-200 mt-0.5">
-                    Opens at {salon.opening_time?.slice(0, 5) ?? '09:00'}
+                    {t('salonDetails.opens_at', 'Opens at')} {salon.opening_time?.slice(0, 5) ?? '09:00'}
                   </p>
                 </div>
               )}
@@ -325,12 +327,12 @@ export default function SalonDetails() {
 
             {/* Quick stats */}
             <Card className="p-4">
-              <h3 className="text-sm font-semibold text-white mb-3">Quick Info</h3>
+              <h3 className="text-sm font-semibold text-white mb-3">{t('salonDetails.quick_info', 'Quick Info')}</h3>
               <div className="flex flex-col gap-2.5">
                 {[
-                  { label: 'Max Daily Tokens', value: salon.max_daily_tokens ?? 50 },
-                  { label: 'Avg Service Time',  value: `${salon.avg_service_minutes ?? 30} min` },
-                  { label: 'Workers Available', value: workers.filter((w) => w.status === 'active').length },
+                  { label: t('salonDetails.max_daily_tokens', 'Max Daily Tokens'), value: salon.max_daily_tokens ?? 50 },
+                  { label: t('salonDetails.avg_service_time', 'Avg Service Time'),  value: `${salon.avg_service_minutes ?? 30} min` },
+                  { label: t('salonDetails.workers_available', 'Workers Available'), value: workers.filter((w) => w.status === 'active').length },
                 ].map((item) => (
                   <div key={item.label} className="flex items-center justify-between">
                     <span className="text-xs text-dark-200">{item.label}</span>
@@ -347,7 +349,7 @@ export default function SalonDetails() {
       <div className="lg:hidden fixed bottom-16 left-0 right-0 p-4 bg-surface-secondary/90 backdrop-blur-xl border-t border-white/10 z-40 pb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
         <div className="flex items-center justify-between gap-4">
           <div className="flex-1">
-            <p className="text-xs font-semibold text-dark-200 uppercase tracking-widest mb-0.5">Est. Wait</p>
+            <p className="text-xs font-semibold text-dark-200 uppercase tracking-widest mb-0.5">{t('salonDetails.est_wait', 'Est. Wait')}</p>
             <p className="text-xl font-display font-bold text-brand-400 leading-none">
               {waitMins === 0 ? '0m' : `~${waitMins}m`}
             </p>
@@ -355,10 +357,10 @@ export default function SalonDetails() {
           <div className="flex-1">
             {isOpen ? (
               <Link to={user ? `/salons/${salonId}/token` : '/login'} className="block w-full">
-                <Button fullWidth className="py-3 shadow-glow-gold">Get Token</Button>
+                <Button fullWidth className="py-3 shadow-glow-gold">{t('salonDetails.get_token', 'Get Token')}</Button>
               </Link>
             ) : (
-              <Button fullWidth disabled variant="secondary" className="py-3">Closed</Button>
+              <Button fullWidth disabled variant="secondary" className="py-3">{t('findSalons.closed', 'Closed')}</Button>
             )}
           </div>
         </div>

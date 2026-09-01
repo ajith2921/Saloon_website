@@ -8,6 +8,7 @@ import { useMyToken } from '../../hooks/useApi'
 import { useRealtimeToken, useRealtimeQueue } from '../../hooks/useRealtime'
 import { useToast } from '../../context/ToastContext'
 import { TokenBadge, Spinner, Skeleton, EmptyState, ConfirmModal, Card, Button, PageHeader } from '../../components/ui'
+import { useTranslation } from 'react-i18next'
 import api from '../../lib/api'
 
 const STATUS_CONFIG = {
@@ -44,6 +45,7 @@ const STATUS_CONFIG = {
 }
 
 export default function MyToken() {
+  const { t } = useTranslation()
   const { data, loading, refetch } = useMyToken()
   const { success, warning, info } = useToast()
   const [cancelling, setCancelling] = useState(false)
@@ -163,7 +165,7 @@ export default function MyToken() {
         <div className="absolute inset-0 bg-gradient-radial from-brand-500/10 to-transparent pointer-events-none" />
         
         <div className="text-center mb-8 relative z-10">
-          <p className="text-xs font-semibold uppercase tracking-widest text-dark-200 mb-2">Your Token</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-dark-200 mb-2">{t('home.your_token', 'Your Token')}</p>
           <div className="animate-token">
             <p className="font-display text-[7rem] sm:text-[8rem] font-black text-white leading-none drop-shadow-lg mb-2">#{token.token_number}</p>
           </div>
@@ -172,19 +174,19 @@ export default function MyToken() {
 
         <div className="grid grid-cols-3 gap-4 mb-6 relative z-10">
           <div className="bg-surface-primary/60 border border-white/5 rounded-2xl p-4 text-center">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-dark-200 mb-1">Serving</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-dark-200 mb-1">{t('salonDetails.now_serving', 'Serving')}</p>
             <p className="font-display font-bold text-white text-2xl leading-none">
               {currentToken ? `#${currentToken.token_number}` : '—'}
             </p>
           </div>
           <div className="bg-surface-primary/60 border border-white/5 rounded-2xl p-4 text-center">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-dark-200 mb-1">Ahead</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-dark-200 mb-1">{t('token.queue_ahead', 'Ahead')}</p>
             <p className="font-display font-bold text-white text-2xl leading-none">
               {position != null ? Math.max(0, position - 1) : '—'}
             </p>
           </div>
           <div className="bg-brand-500/5 border border-brand-500/10 rounded-2xl p-4 text-center">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-dark-200 mb-1">Est. Wait</p>
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-dark-200 mb-1">{t('home.est_wait', 'Est. Wait')}</p>
             <p className="font-display font-bold text-brand-400 text-2xl leading-none">
               {eta === 0 ? 'Soon!' : `~${eta}m`}
             </p>
@@ -240,12 +242,12 @@ export default function MyToken() {
               loading={cancelling}
               className="flex-1"
             >
-              <X className="w-4 h-4 mr-1" /> Cancel Token
+              <X className="w-4 h-4 mr-1" /> {t('token.cancel_token', 'Cancel Token')}
             </Button>
           )}
           <Link to={`/queue/${token.salon_id}`} className="flex-1">
             <Button variant="secondary" fullWidth>
-              <Users className="w-4 h-4 mr-1" /> Live Queue
+              <Users className="w-4 h-4 mr-1" /> {t('salonDetails.live_queue', 'Live Queue')}
             </Button>
           </Link>
         </div>
