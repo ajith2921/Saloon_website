@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, ConfigDict, field_validator
 from typing import Optional, Literal
 from uuid import UUID
 import re
+from datetime import datetime
 
 # Allowlist of safe URL protocols. Reject localhost/private IP ranges.
 _PRIVATE_IP_RE = re.compile(
@@ -35,7 +36,8 @@ class TokenCreate(BaseModel):
     worker_id: Optional[UUID] = None
     guest_name: Optional[str] = None
     guest_phone: Optional[str] = None
-
+    is_booking: Optional[bool] = False
+    scheduled_for: Optional[datetime] = None
 
 class TokenReassign(BaseModel):
     worker_id: Optional[UUID] = None

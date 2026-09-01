@@ -79,9 +79,10 @@ export function useRealtimeQueue(salonId, onTokenChange, adminMode = false) {
 
   const activeTokens  = tokens.filter((t) => ['waiting', 'called', 'serving'].includes(t.status))
   const currentToken  = tokens.find((t) => t.status === 'serving') ?? tokens.find((t) => t.status === 'called')
-  const waitingTokens = tokens.filter((t) => t.status === 'waiting')
+  const waitingTokens = tokens.filter((t) => t.status === 'waiting' && !t.is_booking)
+  const bookingTokens = tokens.filter((t) => t.status === 'waiting' && t.is_booking)
 
-  return { tokens, activeTokens, currentToken, waitingTokens, loading: isLoading, refetch }
+  return { tokens, activeTokens, currentToken, waitingTokens, bookingTokens, loading: isLoading, refetch }
 }
 
 export function useRealtimeToken(tokenId, onStatusChange) {

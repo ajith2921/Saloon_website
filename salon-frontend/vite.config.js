@@ -15,16 +15,19 @@ export default defineConfig({
         theme_color: '#111113',
         background_color: '#111113',
         display: 'standalone',
+        orientation: 'portrait',
         icons: [
           {
             src: '/favicon.svg',
             sizes: '192x192',
-            type: 'image/svg+xml'
+            type: 'image/svg+xml',
+            purpose: 'any maskable'
           },
           {
             src: '/favicon.svg',
             sizes: '512x512',
-            type: 'image/svg+xml'
+            type: 'image/svg+xml',
+            purpose: 'any maskable'
           }
         ]
       }

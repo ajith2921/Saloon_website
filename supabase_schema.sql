@@ -1,4 +1,4 @@
-﻿-- QueueCut tenant/security migration
+-- QueueCut tenant/security migration
 -- Apply this in the Supabase SQL editor after backing up the project.
 -- It is safe to run against the schema supplied with this repository.
 
@@ -69,8 +69,10 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.create_queue_token(UUID, UUID, UUID, UUID) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.create_queue_token(UUID, UUID, UUID, UUID) TO service_role;
+REVOKE ALL ON FUNCTION public.create_queue_token(UUID, UUID, UUID, UUID, TEXT, BOOLEAN, TIMESTAMP WITH TIME ZONE) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.create_queue_token(UUID, UUID, UUID, UUID, TEXT, BOOLEAN, TIMESTAMP WITH TIME ZONE) TO service_role;
+GRANT EXECUTE ON FUNCTION public.create_queue_token(UUID, UUID, UUID, UUID, TEXT, BOOLEAN, TIMESTAMP WITH TIME ZONE) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.create_queue_token(UUID, UUID, UUID, UUID, TEXT, BOOLEAN, TIMESTAMP WITH TIME ZONE) TO anon;
 
 ALTER TABLE public.workers
   ADD CONSTRAINT workers_salon_id_required CHECK (salon_id IS NOT NULL) NOT VALID;
@@ -665,77 +667,106 @@ ALTER COLUMN customer_id DROP NOT NULL;
 
 -- 3. Ensure a token has either a customer_id OR a guest_name
 ALTER TABLE public.tokens 
-DROP CONSTRAINT IF EXISTS tokens_customer_or_guest_check;
+  ADD CONSTRAINT check_status 
+  CHECK (status IN ('waiting', 'serving', 'completed', 'cancelled', 'no_show', 'assigned', 'scheduled'));
 
 ALTER TABLE public.tokens 
-ADD CONSTRAINT tokens_customer_or_guest_check 
-CHECK (customer_id IS NOT NULL OR guest_name IS NOT NULL);
+  ADD CONSTRAINT tokens_customer_or_guest 
+  CHECK (
+    (customer_id IS NOT NULL AND guest_name IS NULL) OR 
+    (customer_id IS NULL AND guest_name IS NOT NULL)
+  );
+
+-- Add Booking support to tokens
+ALTER TABLE public.tokens 
+  ADD COLUMN IF NOT EXISTS is_booking BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS scheduled_for TIMESTAMP WITH TIME ZONE DEFAULT NULL;
+
+-- Index for querying future bookings
+CREATE INDEX IF NOT EXISTS idx_tokens_scheduled_for ON public.tokens(salon_id, scheduled_for) WHERE is_booking = true;
 
 -- 4. Update the create_queue_token function to accept p_guest_name
 CREATE OR REPLACE FUNCTION public.create_queue_token(
-  p_salon_id UUID,
-  p_customer_id UUID,
-  p_service_id UUID,
-  p_worker_id UUID DEFAULT NULL,
-  p_guest_name TEXT DEFAULT NULL
-)
-RETURNS SETOF public.tokens
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  v_salon public.salons%ROWTYPE;
-  v_next_number INTEGER;
-BEGIN
-  IF p_customer_id IS NULL AND p_guest_name IS NULL THEN 
-    RAISE EXCEPTION 'CUSTOMER_OR_GUEST_REQUIRED'; 
-  END IF;
+    p_salon_id UUID,
+    p_customer_id UUID,
+    p_service_id UUID,
+    p_worker_id UUID DEFAULT NULL,
+    p_guest_name TEXT DEFAULT NULL,
+    p_is_booking BOOLEAN DEFAULT false,
+    p_scheduled_for TIMESTAMP WITH TIME ZONE DEFAULT NULL
+  )
+  RETURNS SETOF public.tokens
+  LANGUAGE plpgsql
+  SECURITY DEFINER
+  SET search_path = public
+  AS $$
+  DECLARE
+    v_salon public.salons%ROWTYPE;
+    v_next_number INTEGER;
+  BEGIN
+    IF p_customer_id IS NULL AND p_guest_name IS NULL THEN 
+      RAISE EXCEPTION 'CUSTOMER_OR_GUEST_REQUIRED'; 
+    END IF;
 
-  PERFORM pg_advisory_xact_lock(hashtext(p_salon_id::text || CURRENT_DATE::text));
+    IF p_is_booking AND p_scheduled_for IS NULL THEN
+      RAISE EXCEPTION 'SCHEDULED_TIME_REQUIRED_FOR_BOOKING';
+    END IF;
   
-  -- Optimization: Remove FOR UPDATE since advisory lock already handles concurrency
-  SELECT * INTO v_salon FROM public.salons WHERE id = p_salon_id;
+    -- Lock the salon date if it's a live queue token. For bookings, we lock the scheduled date.
+    IF p_is_booking THEN
+      PERFORM pg_advisory_xact_lock(hashtext(p_salon_id::text || (p_scheduled_for AT TIME ZONE 'UTC')::date::text));
+    ELSE
+      PERFORM pg_advisory_xact_lock(hashtext(p_salon_id::text || CURRENT_DATE::text));
+    END IF;
+    
+    SELECT * INTO v_salon FROM public.salons WHERE id = p_salon_id;
+  
+    IF NOT FOUND THEN RAISE EXCEPTION 'SALON_NOT_FOUND'; END IF;
+    IF v_salon.status <> 'active' THEN RAISE EXCEPTION 'SALON_NOT_ACCEPTING_TOKENS'; END IF;
+    
+    IF NOT EXISTS (
+      SELECT 1 FROM public.services
+      WHERE id = p_service_id AND salon_id = p_salon_id AND status = 'active'
+    ) THEN RAISE EXCEPTION 'SERVICE_UNAVAILABLE'; END IF;
+  
+    IF p_worker_id IS NOT NULL AND NOT EXISTS (
+      SELECT 1 FROM public.workers
+      WHERE id = p_worker_id AND salon_id = p_salon_id AND status = 'active'
+    ) THEN RAISE EXCEPTION 'WORKER_UNAVAILABLE'; END IF;
+  
+    IF p_customer_id IS NOT NULL AND NOT p_is_booking THEN
+      -- Only prevent multiple active tokens for live queue. Users can have multiple future bookings.
+      IF EXISTS (
+        SELECT 1 FROM public.tokens
+        WHERE salon_id = p_salon_id AND customer_id = p_customer_id
+        AND date = CURRENT_DATE AND status IN ('waiting', 'serving', 'assigned')
+      ) THEN RAISE EXCEPTION 'CUSTOMER_ALREADY_IN_QUEUE'; END IF;
+    END IF;
+  
+    -- Get next token number for the specific date
+    SELECT COALESCE(MAX(token_number), 0) + 1 INTO v_next_number
+    FROM public.tokens
+    WHERE salon_id = p_salon_id 
+    AND date = COALESCE((p_scheduled_for AT TIME ZONE 'UTC')::date, CURRENT_DATE);
+  
+    RETURN QUERY
+    INSERT INTO public.tokens (
+      salon_id, customer_id, guest_name, service_id, worker_id, 
+      token_number, status, date, is_booking, scheduled_for
+    ) VALUES (
+      p_salon_id, p_customer_id, p_guest_name, p_service_id, p_worker_id, 
+      v_next_number, 
+      CASE WHEN p_is_booking THEN 'scheduled'::token_status ELSE 'waiting'::token_status END, 
+      COALESCE((p_scheduled_for AT TIME ZONE 'UTC')::date, CURRENT_DATE),
+      p_is_booking, p_scheduled_for
+    ) RETURNING *;
+  END;
+  $$;
 
-  IF NOT FOUND THEN RAISE EXCEPTION 'SALON_NOT_FOUND'; END IF;
-  IF v_salon.status <> 'active' THEN RAISE EXCEPTION 'SALON_NOT_ACCEPTING_TOKENS'; END IF;
-  
-  IF NOT EXISTS (
-    SELECT 1 FROM public.services
-    WHERE id = p_service_id AND salon_id = p_salon_id AND status = 'active'
-  ) THEN RAISE EXCEPTION 'SERVICE_UNAVAILABLE'; END IF;
-  
-  IF p_worker_id IS NOT NULL AND NOT EXISTS (
-    SELECT 1 FROM public.workers
-    WHERE id = p_worker_id AND salon_id = p_salon_id AND status = 'active'
-  ) THEN RAISE EXCEPTION 'WORKER_UNAVAILABLE'; END IF;
-  
-  -- Only check active token existence for registered customers
-  IF p_customer_id IS NOT NULL THEN
-    IF EXISTS (
-      SELECT 1 FROM public.tokens
-      WHERE salon_id = p_salon_id AND customer_id = p_customer_id
-        AND date = CURRENT_DATE AND status IN ('waiting', 'called', 'serving')
-    ) THEN RAISE EXCEPTION 'ACTIVE_TOKEN_EXISTS'; END IF;
-  END IF;
-  
-  IF (
-    SELECT count(*) FROM public.tokens
-    WHERE salon_id = p_salon_id AND date = CURRENT_DATE
-  ) >= v_salon.max_daily_tokens THEN RAISE EXCEPTION 'DAILY_TOKEN_LIMIT_REACHED'; END IF;
-
-  SELECT COALESCE(MAX(token_number), 0) + 1 INTO v_next_number
-  FROM public.tokens WHERE salon_id = p_salon_id AND date = CURRENT_DATE;
-
-  RETURN QUERY
-  INSERT INTO public.tokens (salon_id, customer_id, guest_name, service_id, worker_id, token_number, status, date)
-  VALUES (p_salon_id, p_customer_id, p_guest_name, p_service_id, p_worker_id, v_next_number, 'waiting', CURRENT_DATE)
-  RETURNING *;
-END;
-$$;
-
-REVOKE ALL ON FUNCTION public.create_queue_token(UUID, UUID, UUID, UUID, TEXT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.create_queue_token(UUID, UUID, UUID, UUID, TEXT) TO service_role;
+REVOKE ALL ON FUNCTION public.create_queue_token(UUID, UUID, UUID, UUID, TEXT, BOOLEAN, TIMESTAMP WITH TIME ZONE) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.create_queue_token(UUID, UUID, UUID, UUID, TEXT, BOOLEAN, TIMESTAMP WITH TIME ZONE) TO service_role;
+GRANT EXECUTE ON FUNCTION public.create_queue_token(UUID, UUID, UUID, UUID, TEXT, BOOLEAN, TIMESTAMP WITH TIME ZONE) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.create_queue_token(UUID, UUID, UUID, UUID, TEXT, BOOLEAN, TIMESTAMP WITH TIME ZONE) TO anon;
 
 
 

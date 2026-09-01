@@ -14,7 +14,7 @@ export default function QueueManagement() {
   // db_salon_id is set by the backend profile resolution and is authoritative
   const salonId = profile?.db_salon_id ?? profile?.salons?.[0]?.id
   // adminMode=true → uses /queue/admin (authenticated) which includes profiles(full_name)
-  const { tokens, activeTokens, waitingTokens, loading, refetch } = useRealtimeQueue(salonId, undefined, true)
+  const { tokens, activeTokens, waitingTokens, bookingTokens, loading, refetch } = useRealtimeQueue(salonId, undefined, true)
   const { success, error: showError } = useToast()
   const [actionLoading, setActionLoading] = useState(null)
 
@@ -281,6 +281,47 @@ export default function QueueManagement() {
                   </motion.div>
                 ))}
               </AnimatePresence>
+            )}
+            
+            {bookingTokens?.length > 0 && (
+              <>
+                <h3 className="text-xs font-bold text-dark-200 uppercase tracking-wider mt-6 mb-2 px-1">Upcoming Appointments</h3>
+                <AnimatePresence>
+                  {bookingTokens.map((t) => (
+                    <motion.div
+                      key={t.id}
+                      layout
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20, scale: 0.9 }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                      className="bg-brand-500/10 border border-brand-500/20 rounded-xl p-3 flex items-center gap-3 group transition-colors hover:border-brand-500/30"
+                    >
+                      <div className="w-10 h-10 rounded-lg bg-surface-primary flex items-center justify-center font-bold text-brand-400 border border-white/5 shadow-inner">
+                        {t.token_number}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-white truncate">{t.guest_name || t.profiles?.full_name || 'Walk-in'}</p>
+                        <p className="text-[10px] text-brand-300 font-medium">
+                          {new Date(t.scheduled_for).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {t.services?.name}
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button 
+                          variant="secondary"
+                          onClick={() => updateStatus(t.id, 'call')}
+                          loading={actionLoading === t.id}
+                          disabled={actionLoading !== null}
+                          className="px-2 py-1 text-[10px] h-auto"
+                          aria-label={`Call token ${t.token_number}`}
+                        >
+                          Call
+                        </Button>
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </>
             )}
           </div>
         </Card>
