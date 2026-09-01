@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useSearchParams } from 'react-router-dom'
 import { Scissors, Clock, ArrowRight, ChevronLeft, AlertCircle, CheckCircle } from 'lucide-react'
 import { useSalon, useSalonServices, useSalonWorkers } from '../../hooks/useApi'
 import { useRealtimeQueue } from '../../hooks/useRealtime'
@@ -9,6 +9,7 @@ import api from '../../lib/api'
 
 export default function GetToken() {
   const { salonId } = useParams()
+  const [searchParams] = useSearchParams()
   const { success, error: showError, info } = useToast()
 
   const { data: salon }          = useSalon(salonId)
@@ -20,7 +21,7 @@ export default function GetToken() {
   const [selectedWorker,  setSelectedWorker]  = useState(null)
   const [loading, setLoading]                 = useState(false)
   const [token, setToken]                     = useState(null)
-  const [isBooking, setIsBooking]             = useState(false)
+  const [isBooking, setIsBooking]             = useState(searchParams.get('mode') === 'book')
   const [scheduledFor, setScheduledFor]       = useState('')
 
   const services = (servicesData?.services ?? []).filter((s) => s.status === 'active')

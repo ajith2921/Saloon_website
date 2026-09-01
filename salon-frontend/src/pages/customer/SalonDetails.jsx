@@ -312,15 +312,27 @@ export default function SalonDetails() {
               </div>
 
               {isOpen ? (
-                <Link to={user ? `/salons/${salonId}/token` : '/login'} className="block w-full">
-                  <Button fullWidth>{t('salonDetails.get_token', 'Get Token')} <ArrowRight className="w-4 h-4 ml-1" /></Button>
-                </Link>
+                <div className="flex flex-col gap-2">
+                  <Link to={user ? `/salons/${salonId}/token` : '/login'} className="block w-full">
+                    <Button fullWidth>{t('salonDetails.get_token', 'Get Token')} <ArrowRight className="w-4 h-4 ml-1" /></Button>
+                  </Link>
+                  <Link to={user ? `/salons/${salonId}/token?mode=book` : '/login'} className="block w-full">
+                    <Button fullWidth variant="secondary" className="text-sm">
+                      📅 {t('salonDetails.book_appointment', 'Book Appointment')}
+                    </Button>
+                  </Link>
+                </div>
               ) : (
                 <div className="bg-surface-tertiary rounded-xl p-3 text-center border border-white/5">
                   <p className="text-dark-100 text-sm font-medium">{t('salonDetails.salon_closed', 'Salon is currently closed')}</p>
                   <p className="text-xs text-dark-200 mt-0.5">
                     {t('salonDetails.opens_at', 'Opens at')} {salon.opening_time?.slice(0, 5) ?? '09:00'}
                   </p>
+                  <Link to={user ? `/salons/${salonId}/token?mode=book` : '/login'} className="block w-full mt-3">
+                    <Button fullWidth variant="secondary" className="text-sm">
+                      📅 {t('salonDetails.book_for_later', 'Book for Later')}
+                    </Button>
+                  </Link>
                 </div>
               )}
             </Card>
@@ -356,11 +368,21 @@ export default function SalonDetails() {
           </div>
           <div className="flex-1">
             {isOpen ? (
-              <Link to={user ? `/salons/${salonId}/token` : '/login'} className="block w-full">
-                <Button fullWidth className="py-3 shadow-glow-gold">{t('salonDetails.get_token', 'Get Token')}</Button>
-              </Link>
+              <div className="flex gap-2">
+                <Link to={user ? `/salons/${salonId}/token` : '/login'} className="flex-1">
+                  <Button fullWidth className="py-3 shadow-glow-gold text-sm">{t('salonDetails.get_token', 'Get Token')}</Button>
+                </Link>
+                <Link to={user ? `/salons/${salonId}/token?mode=book` : '/login'} className="flex-1">
+                  <Button fullWidth variant="secondary" className="py-3 text-sm">📅 Book</Button>
+                </Link>
+              </div>
             ) : (
-              <Button fullWidth disabled variant="secondary" className="py-3">{t('findSalons.closed', 'Closed')}</Button>
+              <div className="flex gap-2">
+                <Button fullWidth disabled variant="secondary" className="py-3 flex-1">{t('findSalons.closed', 'Closed')}</Button>
+                <Link to={user ? `/salons/${salonId}/token?mode=book` : '/login'} className="flex-1">
+                  <Button fullWidth variant="secondary" className="py-3 text-sm">📅 Book</Button>
+                </Link>
+              </div>
             )}
           </div>
         </div>
