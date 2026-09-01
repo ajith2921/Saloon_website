@@ -40,6 +40,19 @@ app.include_router(subscriptions.router)
 app.include_router(billing.router)
 app.include_router(webhooks.router)
 
+from .database import supabase_admin
+
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "message": "Backend is running!"}
+    # Ping the database to keep Supabase from pausing due to inactivity
+    try:
+        supabase_admin.table("salons").select("id").limit(1).execute()
+        db_status = "connected"
+    except Exception as e:
+        db_status = f"error: {str(e)}"
+        
+    return {
+        "status": "ok", 
+        "message": "Backend is running!",
+        "database": db_status
+    }
