@@ -9,6 +9,7 @@ export default function Profile() {
   const [form, setForm] = useState({
     full_name: profile?.full_name ?? '',
     phone:     profile?.phone ?? '',
+    sms_notifications: profile?.sms_notifications ?? false,
   })
   const [saving, setSaving] = useState(false)
 
@@ -74,8 +75,32 @@ export default function Profile() {
               disabled
               className="opacity-50 cursor-not-allowed"
             />
-            <Button onClick={handleSave} loading={saving} fullWidth>
-              <Save className="w-4 h-4" /> Save Changes
+            
+            <div className="flex items-center justify-between p-4 mt-2 bg-surface-secondary border border-white/10 rounded-2xl">
+              <div>
+                <p className="font-bold text-white text-sm">SMS Notifications</p>
+                <p className="text-xs text-dark-200 mt-0.5 max-w-[200px]">Get texted when you are next in line. Standard rates may apply.</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={form.sms_notifications}
+                onClick={() => setForm({ ...form, sms_notifications: !form.sms_notifications })}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2 focus:ring-offset-surface-primary ${
+                  form.sms_notifications ? 'bg-brand-500' : 'bg-dark-300'
+                }`}
+              >
+                <span
+                  aria-hidden="true"
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    form.sms_notifications ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            <Button onClick={handleSave} loading={saving} fullWidth className="mt-2">
+              <Save className="w-4 h-4 mr-2" /> Save Changes
             </Button>
           </div>
         </Card>

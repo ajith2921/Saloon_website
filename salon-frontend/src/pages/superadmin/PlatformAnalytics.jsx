@@ -1,7 +1,8 @@
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts'
-import { Building2, Users, Ticket, TrendingUp, RefreshCw, Store, Activity } from 'lucide-react'
+import { useState } from 'react'
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts'
+import { Building2, Users, Ticket, TrendingUp, RefreshCw, Store, Activity, MapPin } from 'lucide-react'
 import { useFetch } from '../../hooks/useApi'
-import { StatCard, PageHeader, Card, Button, Skeleton, ErrorState } from '../../components/ui'
+import { StatCard, PageHeader, Card, Button, Skeleton, ErrorState, DateRangePicker } from '../../components/ui'
 
 const STATUS_COLORS = {
   Active:    '#22c55e',
@@ -44,7 +45,8 @@ function ChartsSkeleton() {
 }
 
 export default function PlatformAnalytics() {
-  const { data, loading, error, refetch } = useFetch('/api/super-admin/stats')
+  const [dateRange, setDateRange] = useState('30d')
+  const { data, loading, error, refetch } = useFetch(`/api/super-admin/stats?range=${dateRange}`)
 
   // Derived pie data
   const salonStatusData = [
@@ -64,14 +66,17 @@ export default function PlatformAnalytics() {
         title="Platform Analytics"
         subtitle="Live platform-wide metrics across all salons"
         action={
-          <Button
-            variant="icon"
-            onClick={refetch}
-            aria-label="Refresh analytics"
-            disabled={loading}
-          >
-            <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />
-          </Button>
+          <div className="flex items-center gap-4">
+            <DateRangePicker value={dateRange} onChange={setDateRange} />
+            <Button
+              variant="icon"
+              onClick={refetch}
+              aria-label="Refresh analytics"
+              disabled={loading}
+            >
+              <RefreshCw className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} aria-hidden="true" />
+            </Button>
+          </div>
         }
       />
 
@@ -193,6 +198,92 @@ export default function PlatformAnalytics() {
                     <span className="text-sm font-bold text-white">{value}</span>
                   </div>
                 ))}
+              </div>
+            </Card>
+          </div>
+
+          {/* Time Series Chart */}
+          <div className="mt-6">
+            <Card className="p-5">
+              <h2 className="text-sm font-bold text-white mb-6 uppercase tracking-wider">Revenue & Tokens (Timeline)</h2>
+              
+              {(!data?.time_series || data.time_series.length === 0) ? (
+                <div className="h-64 flex items-center justify-center border-t border-white/5 mt-4">
+                  <p className="text-dark-200 text-sm">No timeline data available for this range.</p>
+                </div>
+              ) : (
+                <div className="h-72 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={data.time_series} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
+                        </linearGradient>
+                        <linearGradient id="colorTokens" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#d4821e" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#d4821e" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                      <XAxis dataKey="date" stroke="#ffffff50" fontSize={12} tickLine={false} axisLine={false} />
+                      <YAxis yAxisId="left" stroke="#ffffff50" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `₹${value}`} />
+                      <YAxis yAxisId="right" orientation="right" stroke="#ffffff50" fontSize={12} tickLine={false} axisLine={false} />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#18181b', borderColor: '#ffffff10', borderRadius: '12px' }}
+                        itemStyle={{ color: '#fff' }}
+                      />
+                      <Area yAxisId="left" type="monotone" dataKey="revenue" stroke="#22c55e" fillOpacity={1} fill="url(#colorRevenue)" name="Revenue" />
+                      <Area yAxisId="right" type="monotone" dataKey="tokens" stroke="#d4821e" fillOpacity={1} fill="url(#colorTokens)" name="Tokens Issued" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </Card>
+          </div>
+
+          {/* Top Salons Table */}
+          <div className="mt-6">
+            <Card className="p-0 overflow-hidden">
+              <div className="p-5 border-b border-white/5 flex items-center justify-between">
+                <h2 className="text-sm font-bold text-white uppercase tracking-wider">Top Performing Salons</h2>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm text-dark-100">
+                  <thead className="text-xs uppercase bg-surface-secondary text-dark-200">
+                    <tr>
+                      <th className="px-5 py-3 font-medium">Salon</th>
+                      <th className="px-5 py-3 font-medium">Location</th>
+                      <th className="px-5 py-3 font-medium text-right">Tokens</th>
+                      <th className="px-5 py-3 font-medium text-right">Revenue</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(!data?.top_salons || data.top_salons.length === 0) ? (
+                      <tr>
+                        <td colSpan="4" className="px-5 py-10 text-center text-dark-200">No top salon data available.</td>
+                      </tr>
+                    ) : (
+                      data.top_salons.map((salon) => (
+                        <tr key={salon.id} className="border-b border-white/5 last:border-0 hover:bg-white/[0.02] transition-colors">
+                          <td className="px-5 py-4 font-medium text-white flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-brand-500/20 flex items-center justify-center flex-shrink-0 text-brand-400 font-bold">
+                              {salon.name[0]}
+                            </div>
+                            {salon.name}
+                          </td>
+                          <td className="px-5 py-4">
+                            <div className="flex items-center gap-1.5 text-xs">
+                              <MapPin className="w-3 h-3" /> {salon.city}
+                            </div>
+                          </td>
+                          <td className="px-5 py-4 text-right font-bold text-white">{salon.total_tokens}</td>
+                          <td className="px-5 py-4 text-right font-bold text-green-400">₹{salon.revenue}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               </div>
             </Card>
           </div>
