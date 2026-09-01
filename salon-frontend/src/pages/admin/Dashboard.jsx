@@ -1,4 +1,4 @@
-import { Users, Ticket, CheckCircle, TrendingUp, AlertTriangle, RefreshCw } from 'lucide-react'
+import { Users, Ticket, CheckCircle, TrendingUp, AlertTriangle, RefreshCw, DollarSign, CalendarClock } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useSalonStats } from '../../hooks/useApi'
 import { StatCard, PageHeader, Card, Button, Skeleton } from '../../components/ui'
@@ -40,7 +40,7 @@ export default function Dashboard() {
         </>
       ) : (
         <>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
             <StatCard
               label="Queue (Active)"
               value={stats?.waiting ?? 0}
@@ -65,6 +65,18 @@ export default function Dashboard() {
               icon={TrendingUp}
               color="purple"
             />
+            <StatCard
+              label="Today's Revenue"
+              value={stats?.today_revenue != null ? `₹${stats.today_revenue}` : '—'}
+              icon={DollarSign}
+              color="green"
+            />
+            <StatCard
+              label="Upcoming Bookings"
+              value={stats?.upcoming_bookings ?? 0}
+              icon={CalendarClock}
+              color="brand"
+            />
           </div>
 
           <div className="grid lg:grid-cols-2 gap-6">
@@ -76,6 +88,8 @@ export default function Dashboard() {
                   { label: 'Completed services', value: stats?.completed_today ?? 0 },
                   { label: 'Customers in queue', value: stats?.waiting ?? 0 },
                   { label: 'Currently being served', value: stats?.serving ?? 0 },
+                  { label: "Today's Revenue", value: stats?.today_revenue != null ? `₹${stats.today_revenue}` : '—' },
+                  { label: 'Upcoming Appointments', value: stats?.upcoming_bookings ?? 0 },
                   { label: 'Total reviews', value: stats?.review_count ?? 0 },
                 ].map(({ label, value }) => (
                   <div key={label} className="flex items-center justify-between pb-3 border-b border-white/[0.06] last:border-0 last:pb-0">

@@ -107,20 +107,48 @@ def get_admin_live_queue(
 
 @router.get("/{salon_id}/stats")
 def get_salon_stats(salon_id: UUID):
-    # Call the new RPC function to compute stats in the database
+    # Call the RPC function to compute basic live stats
     res = supabase_admin.rpc("get_salon_stats", {"p_salon_id": str(salon_id)}).execute()
-    
-    if res.data:
-        return res.data
 
-    return {
-        "waiting": 0,
-        "serving": 0,
-        "completed_today": 0,
-        "total_today": 0,
-        "avg_rating": 0.0,
-        "review_count": 0,
+    data = res.data if res.data else {
+        "waiting": 0, "serving": 0,
+        "completed_today": 0, "total_today": 0,
+        "avg_rating": 0.0, "review_count": 0,
     }
+
+    # Today's revenue: sum service prices of completed tokens today
+    from datetime import date as _date
+    today = str(_date.today())
+    rev_res = (
+        supabase_admin.table("tokens")
+        .select("services(price)")
+        .eq("salon_id", str(salon_id))
+        .eq("status", "completed")
+        .eq("date", today)
+        .execute()
+    )
+    today_revenue = sum(
+        float((t.get("services") or {}).get("price", 0))
+        for t in (rev_res.data or [])
+    )
+
+    # Upcoming bookings count: is_booking=True and scheduled_for in the future
+    from datetime import datetime as _dt
+    now_iso = _dt.utcnow().isoformat()
+    book_res = (
+        supabase_admin.table("tokens")
+        .select("id", count="exact")
+        .eq("salon_id", str(salon_id))
+        .eq("is_booking", True)
+        .in_("status", ["waiting", "scheduled"])
+        .gte("scheduled_for", now_iso)
+        .execute()
+    )
+    upcoming_bookings = book_res.count or len(book_res.data or [])
+
+    data["today_revenue"] = round(today_revenue, 2)
+    data["upcoming_bookings"] = upcoming_bookings
+    return data
 
 
 @router.get("/mine")
