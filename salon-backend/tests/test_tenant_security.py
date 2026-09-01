@@ -40,6 +40,7 @@ def _chain(**kwargs):
     chain = MagicMock()
     chain.select.return_value = chain
     chain.eq.return_value = chain
+    chain.in_.return_value = chain
     chain.order.return_value = chain
     chain.insert.return_value = chain
     chain.update.return_value = chain
@@ -407,8 +408,17 @@ class TestLegitimateOwnerAccess(unittest.TestCase):
     @patch("app.routers.workers.supabase_admin")
     def test_owner_can_delete_own_worker(self, mock_db):
         """DELETE on a worker that belongs to SALON_A must succeed (200)."""
-        chain = _chain(data=[{"salon_id": SALON_A}])
-        mock_db.table.return_value = chain
+        worker_chain = _chain(data=[{"salon_id": SALON_A}])
+        empty_chain  = _chain(data=[])   # no active tokens → deletion allowed
+
+        call_count = {"n": 0}
+        def _table(name):
+            if name == "tokens":
+                return empty_chain
+            call_count["n"] += 1
+            return worker_chain
+
+        mock_db.table.side_effect = _table
 
         resp = self.client.delete(f"/api/workers/{WORKER_A}")
         self.assertEqual(resp.status_code, 200,
