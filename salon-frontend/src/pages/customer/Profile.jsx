@@ -10,6 +10,7 @@ export default function Profile() {
     full_name: profile?.full_name ?? '',
     phone:     profile?.phone ?? '',
     sms_notifications: profile?.sms_notifications ?? false,
+    email_receipts: profile?.email_receipts ?? false,
   })
   const [saving, setSaving] = useState(false)
 
@@ -94,6 +95,29 @@ export default function Profile() {
                   aria-hidden="true"
                   className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
                     form.sms_notifications ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-surface-secondary border border-white/10 rounded-2xl">
+              <div>
+                <p className="font-bold text-white text-sm">Email Receipts</p>
+                <p className="text-xs text-dark-200 mt-0.5 max-w-[200px]">Automatically receive a receipt when a token completes.</p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={form.email_receipts}
+                onClick={() => setForm({ ...form, email_receipts: !form.email_receipts })}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand-400 focus:ring-offset-2 focus:ring-offset-surface-primary ${
+                  form.email_receipts ? 'bg-brand-500' : 'bg-dark-300'
+                }`}
+              >
+                <span
+                  aria-hidden="true"
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    form.email_receipts ? 'translate-x-5' : 'translate-x-0'
                   }`}
                 />
               </button>

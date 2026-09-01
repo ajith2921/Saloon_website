@@ -13,7 +13,12 @@ const EMPTY_FORM = {
   experience_years: 0,
   status: 'active',
   photo_url: '',
+  shift_start: '09:00',
+  shift_end: '17:00',
+  working_days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
 }
+
+const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 export default function Workers() {
   const { profile } = useAuth()
@@ -39,6 +44,9 @@ export default function Workers() {
           experience_years: worker.experience_years ?? 0,
           status: worker.status ?? 'active',
           photo_url: worker.photo_url ?? '',
+          shift_start: worker.shift_start ?? '09:00',
+          shift_end: worker.shift_end ?? '17:00',
+          working_days: worker.working_days ?? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
         }
       : EMPTY_FORM
     )
@@ -48,6 +56,15 @@ export default function Workers() {
   const handleChange = (e) => {
     const { name, value } = e.target
     setForm(f => ({ ...f, [name]: name === 'experience_years' ? Number(value) : value }))
+  }
+
+  const toggleDay = (day) => {
+    setForm(f => ({
+      ...f,
+      working_days: f.working_days.includes(day)
+        ? f.working_days.filter(d => d !== day)
+        : [...f.working_days, day]
+    }))
   }
 
   const handleSave = async (e) => {
@@ -63,6 +80,9 @@ export default function Workers() {
           experience_years: form.experience_years,
           status: form.status,
           photo_url: form.photo_url || null,
+          shift_start: form.shift_start,
+          shift_end: form.shift_end,
+          working_days: form.working_days,
         }
         await api.put(`/api/workers/${editing.id}`, payload)
         success('Barber updated successfully')
@@ -75,6 +95,9 @@ export default function Workers() {
           experience_years: form.experience_years,
           status: form.status,
           photo_url: form.photo_url || null,
+          shift_start: form.shift_start,
+          shift_end: form.shift_end,
+          working_days: form.working_days,
         }
         await api.post('/api/workers', payload)
         success('Barber added successfully')
@@ -256,6 +279,51 @@ export default function Workers() {
               onChange={handleChange}
               placeholder="https://..."
             />
+          </div>
+
+          {/* Shift Schedule */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-dark-100 mb-1.5" htmlFor="worker-shift-start">Shift Start</label>
+              <Input
+                id="worker-shift-start"
+                type="time"
+                name="shift_start"
+                value={form.shift_start}
+                onChange={handleChange}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-dark-100 mb-1.5" htmlFor="worker-shift-end">Shift End</label>
+              <Input
+                id="worker-shift-end"
+                type="time"
+                name="shift_end"
+                value={form.shift_end}
+                onChange={handleChange}
+              />
+            </div>
+          </div>
+
+          {/* Working Days */}
+          <div>
+            <label className="block text-sm font-medium text-dark-100 mb-2">Working Days</label>
+            <div className="flex flex-wrap gap-2">
+              {DAYS.map(day => (
+                <button
+                  key={day}
+                  type="button"
+                  onClick={() => toggleDay(day)}
+                  className={`px-3 py-1 text-sm font-medium rounded-full border transition-colors ${
+                    form.working_days.includes(day)
+                      ? 'bg-brand-500/20 border-brand-500 text-brand-400'
+                      : 'bg-surface-tertiary border-white/5 text-dark-200 hover:text-white'
+                  }`}
+                >
+                  {day}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Actions */}

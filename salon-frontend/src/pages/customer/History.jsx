@@ -1,7 +1,8 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Ticket, ArrowRight, Star } from 'lucide-react'
+import { Ticket, ArrowRight, Star, FileText } from 'lucide-react'
 import { useTokenHistory } from '../../hooks/useApi'
-import { TokenBadge, Spinner, Skeleton, EmptyState, ErrorState, Card, Button, PageHeader } from '../../components/ui'
+import { TokenBadge, Spinner, Skeleton, EmptyState, ErrorState, Card, Button, PageHeader, Modal } from '../../components/ui'
 
 function formatDate(d) {
   return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -10,6 +11,7 @@ function formatDate(d) {
 export default function History() {
   const { data, loading, error, refetch } = useTokenHistory()
   const tokens = data?.tokens ?? []
+  const [receiptToken, setReceiptToken] = useState(null)
 
   return (
     <div className="container-app max-w-2xl mx-auto py-8">
@@ -70,19 +72,54 @@ export default function History() {
                 </div>
               </div>
               
-              {token.status === 'completed' && !token.ratings?.length && (
-                <div className="pt-3 sm:pt-0 border-t border-white/5 sm:border-t-0 mt-3 sm:mt-0 flex-shrink-0">
-                  <Link to={`/rate/${token.id}`} className="block">
-                    <Button variant="secondary" className="w-full sm:w-auto text-xs px-4 py-2 h-auto shadow-glow-sm">
-                      <Star className="w-3.5 h-3.5 mr-1.5" /> Rate Barber
-                    </Button>
-                  </Link>
+              {token.status === 'completed' && (
+                <div className="pt-3 sm:pt-0 border-t border-white/5 sm:border-t-0 mt-3 sm:mt-0 flex-shrink-0 flex items-center gap-2">
+                  {!token.ratings?.length && (
+                    <Link to={`/rate/${token.id}`} className="block">
+                      <Button variant="secondary" className="w-full sm:w-auto text-xs px-4 py-2 h-auto shadow-glow-sm">
+                        <Star className="w-3.5 h-3.5 mr-1.5" /> Rate
+                      </Button>
+                    </Link>
+                  )}
+                  <Button variant="ghost" onClick={() => setReceiptToken(token)} className="text-xs px-3 py-2 h-auto text-dark-200 hover:text-white">
+                     <FileText className="w-3.5 h-3.5 mr-1" /> Receipt
+                  </Button>
                 </div>
               )}
             </Card>
           ))}
         </div>
       )}
+
+      <Modal open={!!receiptToken} onClose={() => setReceiptToken(null)} title="Payment Receipt" titleId="receipt-title">
+        {receiptToken && (
+          <div className="flex flex-col gap-4 text-sm text-dark-100 p-2">
+            <div className="text-center pb-4 border-b border-white/10">
+              <h3 className="font-bold text-white text-xl">{receiptToken.salons?.name}</h3>
+              {receiptToken.salons?.city && <p className="mt-1">{receiptToken.salons?.city}</p>}
+            </div>
+            <div className="flex justify-between py-1">
+              <span>Date</span>
+              <span className="text-white font-medium">{formatDate(receiptToken.created_at)}</span>
+            </div>
+            <div className="flex justify-between py-1">
+              <span>Token Number</span>
+              <span className="text-white font-medium">#{receiptToken.token_number}</span>
+            </div>
+            <div className="flex justify-between py-1 border-t border-white/10 pt-4 mt-2">
+              <span>{receiptToken.services?.name}</span>
+              <span className="text-white font-medium">₹{receiptToken.services?.price}</span>
+            </div>
+            <div className="flex justify-between py-3 mt-2 border-t border-white/10 font-bold text-base">
+              <span className="text-white">Total</span>
+              <span className="text-brand-400">₹{receiptToken.services?.price}</span>
+            </div>
+            <Button className="mt-4 print:hidden" onClick={() => window.print()} fullWidth>
+              Print PDF
+            </Button>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

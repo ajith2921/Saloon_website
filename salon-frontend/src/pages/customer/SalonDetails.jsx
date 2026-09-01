@@ -3,7 +3,7 @@ import {
   Star, MapPin, Clock, Phone, Mail, Scissors,
   ArrowRight, ChevronLeft
 } from 'lucide-react'
-import { useSalon, useSalonServices, useSalonWorkers } from '../../hooks/useApi'
+import { useSalon, useSalonServices, useSalonWorkers, useFetch } from '../../hooks/useApi'
 import { useRealtimeQueue } from '../../hooks/useRealtime'
 import { StarRating, EmptyState, Skeleton, Card, Button } from '../../components/ui'
 import { useAuth } from '../../context/AuthContext'
@@ -24,9 +24,11 @@ export default function SalonDetails() {
   const { data: servicesData }             = useSalonServices(salonId)
   const { data: workersData }              = useSalonWorkers(salonId)
   const { currentToken, waitingTokens }    = useRealtimeQueue(salonId)
+  const { data: ratingsData }              = useFetch(salonId ? `/api/ratings/salon/${salonId}` : null)
 
   const services = servicesData?.services ?? []
   const workers  = workersData?.workers   ?? []
+  const latestReviews = ratingsData?.ratings?.slice(0, 3) ?? []
 
   const now = new Date()
   const mins = now.getHours() * 60 + now.getMinutes()
@@ -234,6 +236,37 @@ export default function SalonDetails() {
                           <Star className="w-3 h-3 text-amber-400 fill-amber-400" />
                           <span className="text-xs text-amber-400 font-medium">{worker.avg_rating}</span>
                         </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {/* Latest Reviews */}
+            {latestReviews.length > 0 && (
+              <Card className="p-5 mt-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-display font-bold text-white">Latest Reviews</h2>
+                  <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 text-amber-400">
+                    <Star className="w-4 h-4 fill-amber-400" />
+                    <span className="font-bold text-sm">{salon.avg_rating}</span>
+                  </div>
+                </div>
+                <div className="grid gap-4">
+                  {latestReviews.map(r => (
+                    <div key={r.id} className="bg-surface-tertiary rounded-xl p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-surface-elevated flex items-center justify-center font-bold text-white text-xs">
+                            {r.profiles?.full_name?.[0] ?? 'C'}
+                          </div>
+                          <p className="font-semibold text-white text-sm">{r.profiles?.full_name ?? 'Customer'}</p>
+                        </div>
+                        <StarRating rating={r.rating} size="sm" />
+                      </div>
+                      {r.review && (
+                        <p className="text-dark-100 text-sm italic">"{r.review}"</p>
                       )}
                     </div>
                   ))}
