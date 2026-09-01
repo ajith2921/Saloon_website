@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Scissors, Mail, Lock, User, Phone, Eye, EyeOff, ArrowRight, CheckCircle } from 'lucide-react'
+import { Scissors, Mail, Lock, User, Phone, Eye, EyeOff, ArrowRight, CheckCircle, Store } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
@@ -252,6 +252,12 @@ export default function Register() {
                 {t('auth.sign_in_btn')}
               </Link>
             </p>
+            <div className="mt-4">
+              <Link to="/register-owner" className="text-sm text-dark-200 hover:text-brand-400 font-medium transition-colors flex items-center justify-center">
+                <Store className="w-4 h-4 mr-1.5" />
+                {t('auth.register_shop')}
+              </Link>
+            </div>
           </div>
         </Card>
       </div>

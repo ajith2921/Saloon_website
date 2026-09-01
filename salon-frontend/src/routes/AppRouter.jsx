@@ -12,6 +12,7 @@ import SuperAdminLayout from '../layouts/SuperAdminLayout'
 // Auth pages — lazy loaded to reduce bundle size
 const Login           = lazy(() => import('../pages/auth/Login'))
 const Register        = lazy(() => import('../pages/auth/Register'))
+const RegisterOwner   = lazy(() => import('../pages/auth/RegisterOwner'))
 const ResetPassword   = lazy(() => import('../pages/auth/ResetPassword'))
 
 // ─── Customer pages ───────────────────────────────────────────────────────────
@@ -100,6 +101,7 @@ export default function AppRouter() {
       {/* ─── Auth ─── */}
       <Route path="/login"    element={<GuestRoute><Suspense fallback={<PageLoader />}><Login /></Suspense></GuestRoute>} />
       <Route path="/register" element={<GuestRoute><Suspense fallback={<PageLoader />}><Register /></Suspense></GuestRoute>} />
+      <Route path="/register-owner" element={<GuestRoute><Suspense fallback={<PageLoader />}><RegisterOwner /></Suspense></GuestRoute>} />
       <Route path="/reset-password" element={<Suspense fallback={<PageLoader />}><ResetPassword /></Suspense>} />
 
       {/* ─── Customer (public + auth) ─── */}

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Scissors, Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react'
+import { Scissors, Mail, Lock, Eye, EyeOff, ArrowRight, Store } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
@@ -185,13 +185,19 @@ export default function Login() {
             </div>
           )}
 
-          <div className="text-center">
+          <div className="text-center mt-8 pt-6 border-t border-white/5">
             <p className="text-sm text-dark-100">
               {t('auth.no_account')}{' '}
               <Link to="/register" className="text-brand-400 hover:text-brand-300 font-medium transition-colors">
                 {t('auth.create_account_btn')}
               </Link>
             </p>
+            <div className="mt-4">
+              <Link to="/register-owner" className="text-sm text-dark-200 hover:text-brand-400 font-medium transition-colors flex items-center justify-center">
+                <Store className="w-4 h-4 mr-1.5" />
+                {t('auth.register_shop')}
+              </Link>
+            </div>
           </div>
         </Card>
 
