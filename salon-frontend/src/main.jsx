@@ -8,6 +8,34 @@ import ErrorBoundary from './components/ErrorBoundary'
 import './i18n'
 import './index.css'
 
+// ── Stale-chunk recovery (global) ────────────────────────────────────────────
+// When React lazily imports a JS chunk after a new Vercel deployment, the old
+// hashed filename no longer exists. Vercel's SPA rewrite returns index.html
+// (HTTP 200), which the browser tries to parse as JS — causing a
+// "Failed to fetch dynamically imported module" unhandled rejection.
+// We detect this here (before it even reaches ErrorBoundary) and hard-reload
+// once, so the browser fetches the new index.html with the updated chunk URLs.
+window.addEventListener('unhandledrejection', (event) => {
+  const reason = event.reason
+  const msg = reason?.message ?? ''
+  const isChunkError =
+    msg.includes('Failed to fetch dynamically imported module') ||
+    msg.includes('Importing a module script failed') ||
+    msg.includes('error loading dynamically imported module') ||
+    reason?.name === 'ChunkLoadError'
+
+  if (isChunkError) {
+    const reloadKey = 'chunk_error_reloaded'
+    const alreadyReloaded = sessionStorage.getItem(reloadKey)
+    if (!alreadyReloaded) {
+      sessionStorage.setItem(reloadKey, '1')
+      window.location.reload()
+    } else {
+      sessionStorage.removeItem(reloadKey)
+    }
+  }
+})
+
 // Fix Leaflet default marker icons broken by Vite's asset hashing (BUG-034)
 import L from 'leaflet'
 import iconUrl from 'leaflet/dist/images/marker-icon.png'
