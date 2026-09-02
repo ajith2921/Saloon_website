@@ -205,7 +205,7 @@ def update_salon(request: Request, salon_id: UUID, updates: SalonUpdate, user: d
 from ..dependencies import get_current_user_with_profile, require_salon_access, get_current_user, evict_profile_cache
 
 @router.post("")
-@limiter.limit("5/minute")
+@limiter.limit("20/minute")
 def create_salon(request: Request, data: SalonUpdate, user: dict = Depends(get_current_user_with_profile)):
     """Create a new salon and link it to the user. Upgrades a customer to salon_owner."""
     db_role = user.get("db_role")

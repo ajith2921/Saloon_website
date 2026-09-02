@@ -20,7 +20,7 @@ def get_razorpay_client():
     return razorpay.Client(auth=(settings.razorpay_key_id, settings.razorpay_key_secret))
 
 @router.post("/checkout", response_model=BillingCheckoutResponse)
-@limiter.limit("3/minute")
+@limiter.limit("20/minute")
 def create_checkout(
     request: Request,
     payload: BillingCheckoutRequest,
