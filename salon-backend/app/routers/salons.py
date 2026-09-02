@@ -73,7 +73,7 @@ def get_live_queue(salon_id: UUID):
     See /queue/admin for the authenticated owner/worker view with customer names.
     """
     res = supabase_admin.table("tokens").select(
-        "id, token_number, status, service_id, worker_id, is_booking, scheduled_for, services(name, duration_minutes), workers(name, photo_url)"
+        "id, token_number, status, service_id, worker_id, services(name, duration_minutes), workers(name, photo_url)"
     ).eq("salon_id", salon_id).in_("status", ["waiting", "called", "serving"]).order("token_number").execute()
     return {"tokens": res.data}
 
@@ -98,7 +98,7 @@ def get_admin_live_queue(
     today = datetime.now(ist_tz).strftime("%Y-%m-%d")
 
     res = supabase_admin.table("tokens").select(
-        "id, token_number, status, service_id, worker_id, is_booking, scheduled_for, "
+        "id, token_number, status, service_id, worker_id, "
         "services(name, duration_minutes), workers(name, photo_url), "
         "profiles!customer_id(full_name)"
     ).eq("salon_id", salon_id).eq("date", today).order("token_number").execute()
@@ -132,19 +132,8 @@ def get_salon_stats(salon_id: UUID):
         for t in (rev_res.data or [])
     )
 
-    # Upcoming bookings count: is_booking=True and scheduled_for in the future
-    from datetime import datetime as _dt
-    now_iso = _dt.utcnow().isoformat()
-    book_res = (
-        supabase_admin.table("tokens")
-        .select("id", count="exact")
-        .eq("salon_id", str(salon_id))
-        .eq("is_booking", True)
-        .in_("status", ["waiting", "scheduled"])
-        .gte("scheduled_for", now_iso)
-        .execute()
-    )
-    upcoming_bookings = book_res.count or len(book_res.data or [])
+    # Upcoming bookings count: unsupported by current database schema
+    upcoming_bookings = 0
 
     data["today_revenue"] = round(today_revenue, 2)
     data["upcoming_bookings"] = upcoming_bookings

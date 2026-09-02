@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Scissors, MapPin, Clock, Star, ArrowRight, Ticket, Shield, Zap } from 'lucide-react'
+import { Scissors, MapPin, Clock, Star, ArrowRight, Ticket, Shield, Zap, Store } from 'lucide-react'
 import { useSalons, useMyToken } from '../../hooks/useApi'
 import { useAuth } from '../../context/AuthContext'
 import { StarRating, Skeleton, TokenBadge, Card } from '../../components/ui'
@@ -89,8 +89,8 @@ export default function Home() {
                 <Link to="/salons" className="btn-primary w-full sm:w-auto px-8 py-4 text-base shadow-glow-gold justify-center">
                   {t('hero.cta')} <ArrowRight className="w-5 h-5 ml-1" />
                 </Link>
-                <Link to="/salons" className="btn-secondary w-full sm:w-auto px-8 py-4 text-base justify-center">
-                  <MapPin className="w-5 h-5 mr-2" /> Find Nearby Salons
+                <Link to="/partner" className="btn-secondary w-full sm:w-auto px-8 py-4 text-base justify-center text-brand-400 border-brand-500/20 hover:bg-brand-500/10 hover:border-brand-500/50">
+                  <Store className="w-5 h-5 mr-2" /> Setup Your Salon
                 </Link>
               </div>
 

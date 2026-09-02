@@ -47,8 +47,6 @@ def create_token(request: Request, token: TokenCreate, user: dict = Depends(get_
             "p_worker_id": str(token.worker_id) if token.worker_id else None,
             "p_guest_name": guest_name,
             "p_guest_phone": token.guest_phone,
-            "p_is_booking": token.is_booking,
-            "p_scheduled_for": token.scheduled_for.isoformat() if token.scheduled_for else None,
         }).execute()
         if not res.data:
             raise HTTPException(status_code=500, detail="Failed to generate token. Please try again.")

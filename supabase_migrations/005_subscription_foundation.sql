@@ -97,6 +97,5 @@ CREATE POLICY "Super admins manage all subscriptions" ON subscriptions
 
 -- 7. Insert Seed Plans
 INSERT INTO subscription_plans (id, name, description, price, max_workers, max_services, is_active, sort_order, features, billing_interval) VALUES
-('ecae2ad8-8472-4569-a7b7-83912f01eee3', 'Free Tier', 'Basic queue management for single barbers', 0.00, 1, 5, true, 10, '["Up to 5 services", "1 Barber", "Standard Queue"]'::jsonb, 'monthly'),
 ('81cbc565-4c5a-4e3f-b032-a23d17449098', 'Premium (Monthly)', 'Perfect for growing salons with a small team', 299.00, 5, 20, true, 20, '["Up to 20 services", "Up to 5 Barbers", "Analytics Dashboard"]'::jsonb, 'monthly'),
 ('fe0781a8-e496-4406-9821-a4da4d65f776', 'Premium (Yearly)', 'Advanced features for large salons', 2999.00, 15, 50, true, 30, '["Up to 50 services", "Up to 15 Barbers", "Advanced Analytics", "Priority Support"]'::jsonb, 'yearly');
