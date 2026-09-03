@@ -1,4 +1,23 @@
-import { lazy, Suspense, useEffect } from 'react'
+import { lazy as reactLazy, Suspense, useEffect } from 'react'
+
+const lazy = (componentImport) =>
+  reactLazy(async () => {
+    const pageHasAlreadyBeenForceRefreshed = JSON.parse(
+      window.sessionStorage.getItem('page-has-been-force-refreshed') || 'false'
+    );
+    try {
+      const component = await componentImport();
+      window.sessionStorage.setItem('page-has-been-force-refreshed', 'false');
+      return component;
+    } catch (error) {
+      if (!pageHasAlreadyBeenForceRefreshed) {
+        window.sessionStorage.setItem('page-has-been-force-refreshed', 'true');
+        window.location.reload();
+        return new Promise(() => {}); // Suspend forever while reloading
+      }
+      throw error;
+    }
+  });
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { ProtectedRoute, GuestRoute } from './guards'
 import LoadingScreen from '../components/ui/LoadingScreen'
