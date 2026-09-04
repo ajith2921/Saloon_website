@@ -231,12 +231,9 @@ def create_salon(request: Request, data: SalonUpdate, user: dict = Depends(get_c
     
     new_salon = res.data[0]
     
-    # Link the salon to the user's profile and upgrade role if customer
-    profile_update = {"salon_id": new_salon["id"]}
+    # Upgrade role to salon_owner if they are currently just a customer
     if db_role == "customer":
-        profile_update["role"] = "salon_owner"
-        
-    supabase_admin.table("profiles").update(profile_update).eq("id", payload["owner_id"]).execute()
+        supabase_admin.table("profiles").update({"role": "salon_owner"}).eq("id", payload["owner_id"]).execute()
     
     # Evict the cache so the next request gets the new role and salon_id immediately
     evict_profile_cache(payload["owner_id"])
