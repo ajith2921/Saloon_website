@@ -1,5 +1,6 @@
 from uuid import UUID
 from fastapi import APIRouter, HTTPException, Depends, Query, Request
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, field_validator
 from typing import Optional
 from datetime import date
@@ -8,6 +9,16 @@ import re
 from ..limiter import limiter
 from ..database import supabase_admin
 from ..dependencies import get_current_user_with_profile, require_salon_access, get_current_user, evict_profile_cache
+
+# Optional bearer: does NOT raise 403 if Authorization header is absent.
+# Used by public routes that grant extra data when authenticated.
+optional_bearer = HTTPBearer(auto_error=False)
+
+def get_current_user_with_profile_from_credentials(credentials: HTTPAuthorizationCredentials) -> dict:
+    """Helper to resolve profile from explicit credentials (used where auth is optional)."""
+    from ..dependencies import get_current_user, get_current_user_with_profile as _gwp
+    user = get_current_user(credentials)
+    return _gwp(user)
 
 # Reuse the same private-IP validation pattern from schemas
 _PRIVATE_IP_RE = re.compile(
@@ -157,11 +168,35 @@ def get_my_salon(user: dict = Depends(get_current_user_with_profile)):
 
 
 @router.get("/{salon_id}")
-def get_salon_by_id(salon_id: UUID):
-    """Returns public salon details. Only exposes active salons to anonymous callers."""
-    res = supabase_admin.table("salons").select("*, profiles!owner_id(full_name)").eq("id", salon_id).eq("status", "active").execute()
+def get_salon_by_id(salon_id: UUID, credentials: HTTPAuthorizationCredentials = Depends(optional_bearer)):
+    """Returns salon details.
+    - Public / anonymous callers: only active salons are returned.
+    - Authenticated salon owners (of THIS salon) and super admins: any status is returned.
+    """
+    # Try to resolve the caller's role without hard-failing on missing/invalid token
+    caller_role = None
+    caller_salon_id = None
+    if credentials:
+        try:
+            user = get_current_user_with_profile_from_credentials(credentials)
+            caller_role = user.get("db_role")
+            caller_salon_id = user.get("db_salon_id")
+        except Exception:
+            pass  # Anonymous or invalid token — treat as public
+
+    # Determine whether to apply the active-only filter
+    is_owner_of_this_salon = (
+        caller_role == "salon_owner" and str(caller_salon_id) == str(salon_id)
+    )
+    is_super_admin = caller_role == "super_admin"
+
+    query = supabase_admin.table("salons").select("*, profiles!owner_id(full_name)").eq("id", salon_id)
+    if not (is_owner_of_this_salon or is_super_admin):
+        query = query.eq("status", "active")
+
+    res = query.execute()
     if not res.data:
-        raise HTTPException(status_code=404, detail="Salon not found")
+        raise HTTPException(status_code=404, detail="Salon not found or not yet active.")
     return res.data[0]
 
 

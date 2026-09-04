@@ -45,7 +45,23 @@ api.interceptors.response.use(
       return Promise.reject(new Error('Session expired. Please log in again.'))
     }
 
-    const message = error.response?.data?.detail || error.message || 'Something went wrong'
+    const rawDetail = error.response?.data?.detail
+
+    // FastAPI 422 validation errors return detail as an array of objects like:
+    // [{ loc: ["body", "name"], msg: "field required", type: "value_error.missing" }]
+    // Joining them as-is produces "[object Object],[object Object]" — normalize here.
+    let message
+    if (Array.isArray(rawDetail)) {
+      message = rawDetail
+        .map(d => {
+          const field = Array.isArray(d.loc) ? d.loc.filter(l => l !== 'body').join('.') : ''
+          const msg = d.msg || 'Invalid value'
+          return field ? `${field}: ${msg}` : msg
+        })
+        .join('; ')
+    } else {
+      message = rawDetail || error.message || 'Something went wrong'
+    }
     
     // Skip logging for expected 404s (e.g. no active token, no subscription)
     if (status !== 404) {
