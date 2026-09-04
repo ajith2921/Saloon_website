@@ -21,6 +21,7 @@ CREATE INDEX IF NOT EXISTS idx_push_subs_customer_id ON public.push_subscription
 ALTER TABLE public.push_subscriptions ENABLE ROW LEVEL SECURITY;
 
 -- Customers can insert, view, and delete their own subscriptions
+DROP POLICY IF EXISTS "Users can manage own push subscriptions" ON public.push_subscriptions;
 CREATE POLICY "Users can manage own push subscriptions"
     ON public.push_subscriptions FOR ALL
     USING (auth.uid() = customer_id)
