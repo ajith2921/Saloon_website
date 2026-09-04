@@ -47,6 +47,8 @@ def create_token(request: Request, token: TokenCreate, user: dict = Depends(get_
             "p_worker_id": str(token.worker_id) if token.worker_id else None,
             "p_guest_name": guest_name,
             "p_guest_phone": token.guest_phone,
+            "p_is_booking": token.is_booking,
+            "p_scheduled_for": token.scheduled_for.isoformat() if token.scheduled_for else None,
         }).execute()
         if not res.data:
             raise HTTPException(status_code=500, detail="Failed to generate token. Please try again.")
@@ -59,7 +61,10 @@ def create_token(request: Request, token: TokenCreate, user: dict = Depends(get_
             "SERVICE_UNAVAILABLE": (400, "Selected service is unavailable at this salon"),
             "WORKER_UNAVAILABLE": (400, "Selected worker is unavailable at this salon"),
             "ACTIVE_TOKEN_EXISTS": (400, "You already have an active token at this salon for today."),
+            "CUSTOMER_ALREADY_IN_QUEUE": (400, "You already have an active token in the live queue for today."),
             "DAILY_TOKEN_LIMIT_REACHED": (400, "This salon has reached its daily token limit. Please try tomorrow."),
+            "CUSTOMER_OR_GUEST_REQUIRED": (400, "Customer or guest name is required."),
+            "SCHEDULED_TIME_REQUIRED_FOR_BOOKING": (400, "A scheduled time is required for an appointment booking."),
         }
         for marker, (status_code, detail) in error_messages.items():
             if marker in err_str:
