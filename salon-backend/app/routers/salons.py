@@ -7,7 +7,7 @@ import re
 
 from ..limiter import limiter
 from ..database import supabase_admin
-from ..dependencies import get_current_user_with_profile, require_salon_access, get_current_user
+from ..dependencies import get_current_user_with_profile, require_salon_access, get_current_user, evict_profile_cache
 
 # Reuse the same private-IP validation pattern from schemas
 _PRIVATE_IP_RE = re.compile(
@@ -142,7 +142,9 @@ def get_salon_stats(salon_id: UUID):
 
 @router.get("/mine")
 def get_my_salon(user: dict = Depends(get_current_user_with_profile)):
-    """Returns the authenticated owner or worker's assigned salon."""
+    """Returns the authenticated owner or worker's assigned salon.
+    NOTE: This route MUST remain before /{salon_id} so FastAPI matches it first.
+    """
     db_salon_id = user.get("db_salon_id")
     if user.get("db_role") not in ("salon_owner", "worker") or not db_salon_id:
         raise HTTPException(status_code=404, detail="No salon is linked to this account")
@@ -186,6 +188,14 @@ class SalonUpdate(BaseModel):
         return _validate_public_url(v)
 
 
+class SalonCreate(SalonUpdate):
+    """Schema for creating a new salon. Extends SalonUpdate with required fields."""
+    name: str
+    address: str
+    city: str
+    phone: str
+
+
 @router.put("/{salon_id}")
 @limiter.limit("20/minute")
 def update_salon(request: Request, salon_id: UUID, updates: SalonUpdate, user: dict = Depends(get_current_user_with_profile)):
@@ -202,11 +212,9 @@ def update_salon(request: Request, salon_id: UUID, updates: SalonUpdate, user: d
     return res.data[0]
 
 
-from ..dependencies import get_current_user_with_profile, require_salon_access, get_current_user, evict_profile_cache
-
 @router.post("")
 @limiter.limit("20/minute")
-def create_salon(request: Request, data: SalonUpdate, user: dict = Depends(get_current_user_with_profile)):
+def create_salon(request: Request, data: SalonCreate, user: dict = Depends(get_current_user_with_profile)):
     """Create a new salon and link it to the user. Upgrades a customer to salon_owner."""
     db_role = user.get("db_role")
     
