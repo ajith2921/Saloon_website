@@ -4,6 +4,7 @@ import {
   MapPin, Clock, Users, Search, SlidersHorizontal,
   Scissors, X, RefreshCw, Map
 } from 'lucide-react'
+import { motion } from 'framer-motion'
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useSalons } from '../../hooks/useApi'
@@ -244,44 +245,73 @@ export default function FindSalons() {
       )}
 
       {/* Results */}
-      {loading && (
+      {loading ? (
         <div className="flex flex-col gap-4 py-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton key={i} className="h-40 w-full" />
+            <Card key={i} className="flex flex-col sm:flex-row p-0 overflow-hidden">
+              <Skeleton className="sm:w-44 h-40 sm:h-full rounded-none" />
+              <div className="flex-1 p-5 space-y-4">
+                <div className="space-y-2">
+                  <Skeleton className="h-6 w-1/2" />
+                  <Skeleton className="h-4 w-1/3" />
+                </div>
+                <div className="flex gap-4">
+                  <Skeleton className="h-10 w-24 rounded-lg" />
+                  <Skeleton className="h-10 w-24 rounded-lg" />
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Skeleton className="h-10 flex-1 rounded-xl" />
+                  <Skeleton className="h-10 flex-1 rounded-xl" />
+                </div>
+              </div>
+            </Card>
           ))}
         </div>
-      )}
-
-      {!loading && error && (
-        <Card className="text-center p-8">
-          <p className="text-red-400 font-medium">{t('findSalons.failed_load', 'Failed to load salons')}</p>
-          <p className="text-dark-100 text-sm mt-1">{error}</p>
-          <Button variant="secondary" onClick={refetch} className="mt-4">{t('common.try_again', 'Try Again')}</Button>
-        </Card>
-      )}
-
-      {!loading && !error && filtered.length === 0 && (
+      ) : error ? (
         <EmptyState
           icon={Scissors}
-          title={t('findSalons.no_salons', 'No salons found')}
-          description={search ? t('findSalons.no_results', `No results for "${search}"`) : t('findSalons.no_salons_available', 'No salons available right now. Check back soon.')}
-          action={search && (
-            <Button variant="secondary" onClick={() => setSearch('')}>{t('common.clear_search', 'Clear Search')}</Button>
-          )}
+          title={t('common.error_occurred')}
+          description={error}
+          action={<Button onClick={refetch} variant="secondary">{t('common.try_again')}</Button>}
         />
-      )}
-
-      {!loading && !error && filtered.length > 0 && (
-        <>
-          <p className="text-sm text-dark-200 mb-4">
-            {t('findSalons.results_found', `${filtered.length} salons found`)}
-          </p>
-          <div className="flex flex-col gap-4">
-            {filtered.map((salon) => (
-              <SalonCard key={salon.id} salon={salon} t={t} />
-            ))}
-          </div>
-        </>
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          icon={Search}
+          title={t('findSalons.no_salons_found', 'No salons found')}
+          description={t('findSalons.try_adjusting', 'Try adjusting your search or filters to find what you\'re looking for.')}
+          action={
+            (search || onlyOpen) && (
+              <Button onClick={() => { setSearch(''); setOnlyOpen(false); }} variant="secondary">
+                {t('findSalons.clear_filters', 'Clear filters')}
+              </Button>
+            )
+          }
+        />
+      ) : (
+        <motion.div 
+          className="flex flex-col gap-4 py-4"
+          initial="hidden"
+          animate="show"
+          variants={{
+            hidden: { opacity: 0 },
+            show: {
+              opacity: 1,
+              transition: { staggerChildren: 0.1 }
+            }
+          }}
+        >
+          {filtered.map((salon) => (
+            <motion.div
+              key={salon.id}
+              variants={{
+                hidden: { opacity: 0, y: 20 },
+                show: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } }
+              }}
+            >
+              <SalonCard salon={salon} t={t} />
+            </motion.div>
+          ))}
+        </motion.div>
       )}
     </div>
   )

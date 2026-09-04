@@ -13,22 +13,28 @@ router = APIRouter(prefix="/api/super-admin", tags=["Super Admin"])
 
 @router.get("/stats")
 @limiter.limit("30/minute")
-def get_platform_stats(request: Request, user: dict = Depends(require_role("super_admin"))):
+def get_platform_stats(request: Request, range: str = Query("30d"), user: dict = Depends(require_role("super_admin"))):
     """Real platform-wide aggregate stats from the DB via a single consolidated RPC."""
-    res = supabase_admin.rpc("get_platform_stats").execute()
+    try:
+        days = int(range.replace("d", ""))
+    except ValueError:
+        days = 30
+
+    res = supabase_admin.rpc("get_platform_stats", {"p_days": days}).execute()
     if res.data:
+        # The RPC returns a single JSON object with totals, time_series, and top_salons
         data = res.data
         return {
-            "total_salons": data.get("total_salons", 0),
-            "active_salons": data.get("active_salons", 0),
-            "pending_approvals": data.get("pending_approvals", 0),
-            "total_customers": data.get("total_customers", 0),
-            "total_tokens_today": data.get("total_tokens_today", 0),
-            "platform_revenue_month": round(float(data.get("platform_revenue_month", 0)), 2),
+            **data.get("totals", {}),
+            "time_series": data.get("time_series", []),
+            "top_salons": data.get("top_salons", []),
         }
+    
     return {
         "total_salons": 0, "active_salons": 0, "pending_approvals": 0,
         "total_customers": 0, "total_tokens_today": 0, "platform_revenue_month": 0.0,
+        "time_series": [],
+        "top_salons": []
     }
 
 

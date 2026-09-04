@@ -682,6 +682,19 @@ ALTER TABLE public.tokens
   ADD COLUMN IF NOT EXISTS is_booking BOOLEAN DEFAULT false,
   ADD COLUMN IF NOT EXISTS scheduled_for TIMESTAMP WITH TIME ZONE DEFAULT NULL;
 
+CREATE TABLE IF NOT EXISTS public.push_subscriptions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    customer_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    endpoint TEXT NOT NULL UNIQUE,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_push_subs_customer_id ON public.push_subscriptions(customer_id);
+ALTER TABLE public.push_subscriptions ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can manage own push subscriptions" ON public.push_subscriptions FOR ALL USING (auth.uid() = customer_id) WITH CHECK (auth.uid() = customer_id);
+
 -- Index for querying future bookings
 CREATE INDEX IF NOT EXISTS idx_tokens_scheduled_for ON public.tokens(salon_id, scheduled_for) WHERE is_booking = true;
 
@@ -775,7 +788,96 @@ $$;
 REVOKE ALL ON FUNCTION public.create_queue_token(UUID, UUID, UUID, UUID, TEXT, TEXT, BOOLEAN, TIMESTAMP WITH TIME ZONE) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.create_queue_token(UUID, UUID, UUID, UUID, TEXT, TEXT, BOOLEAN, TIMESTAMP WITH TIME ZONE) TO service_role;
 GRANT EXECUTE ON FUNCTION public.create_queue_token(UUID, UUID, UUID, UUID, TEXT, TEXT, BOOLEAN, TIMESTAMP WITH TIME ZONE) TO authenticated;
-GRANT EXECUTE ON FUNCTION public.create_queue_token(UUID, UUID, UUID, UUID, TEXT, TEXT, BOOLEAN, TIMESTAMP WITH TIME ZONE) TO anon;
+-- ============================================================
+-- 023_platform_analytics.sql
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.get_platform_stats(p_days INT DEFAULT 30)
+RETURNS JSON
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_totals JSON;
+  v_time_series JSON;
+  v_top_salons JSON;
+  v_start_date DATE;
+BEGIN
+  v_start_date := CURRENT_DATE - p_days;
+
+  -- 1. Get Totals
+  SELECT json_build_object(
+    'total_salons', (SELECT count(*) FROM public.salons),
+    'active_salons', (SELECT count(*) FROM public.salons WHERE status = 'active'),
+    'pending_approvals', (SELECT count(*) FROM public.salons WHERE status = 'pending'),
+    'total_customers', (SELECT count(*) FROM public.profiles WHERE role = 'customer'),
+    'total_tokens_today', (SELECT count(*) FROM public.tokens WHERE date = CURRENT_DATE),
+    'platform_revenue_month', COALESCE((SELECT sum(amount) FROM public.payment_transactions WHERE status = 'captured' AND created_at >= date_trunc('month', CURRENT_DATE)), 0)
+  ) INTO v_totals;
+
+  -- 2. Get Time Series (Daily revenue & tokens for last p_days)
+  WITH dates AS (
+    SELECT generate_series(v_start_date, CURRENT_DATE, '1 day'::interval)::DATE AS d
+  ),
+  daily_tokens AS (
+    SELECT date, count(*) as tokens
+    FROM public.tokens
+    WHERE date >= v_start_date
+    GROUP BY date
+  ),
+  daily_revenue AS (
+    SELECT created_at::DATE as date, sum(amount) as revenue
+    FROM public.payment_transactions
+    WHERE status = 'captured' AND created_at::DATE >= v_start_date
+    GROUP BY created_at::DATE
+  )
+  SELECT COALESCE(json_agg(
+    json_build_object(
+      'date', to_char(d.d, 'Mon DD'),
+      'tokens', COALESCE(t.tokens, 0),
+      'revenue', COALESCE(r.revenue, 0)
+    ) ORDER BY d.d ASC
+  ), '[]'::json) INTO v_time_series
+  FROM dates d
+  LEFT JOIN daily_tokens t ON d.d = t.date
+  LEFT JOIN daily_revenue r ON d.d = r.date;
+
+  -- 3. Get Top Salons (by total tokens ever, plus revenue)
+  WITH salon_stats AS (
+    SELECT 
+      s.id,
+      s.name,
+      s.city,
+      (SELECT count(*) FROM public.tokens WHERE salon_id = s.id) as total_tokens,
+      (SELECT COALESCE(sum(amount), 0) FROM public.payment_transactions WHERE salon_id = s.id AND status = 'captured') as revenue
+    FROM public.salons s
+    WHERE s.status = 'active'
+    ORDER BY total_tokens DESC
+    LIMIT 5
+  )
+  SELECT COALESCE(json_agg(
+    json_build_object(
+      'id', id,
+      'name', name,
+      'city', city,
+      'total_tokens', total_tokens,
+      'revenue', revenue
+    )
+  ), '[]'::json) INTO v_top_salons
+  FROM salon_stats;
+
+  -- Return Combined JSON
+  RETURN json_build_object(
+    'totals', v_totals,
+    'time_series', v_time_series,
+    'top_salons', v_top_salons
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.get_platform_stats(INT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_platform_stats(INT) TO service_role;
+GRANT EXECUTE ON FUNCTION public.get_platform_stats(INT) TO authenticated;
 
 
 
@@ -992,7 +1094,9 @@ CREATE TABLE IF NOT EXISTS public.live_queue (
     called_at TIMESTAMPTZ,
     started_at TIMESTAMPTZ,
     guest_name TEXT,
-    guest_phone TEXT
+    guest_phone TEXT,
+    is_booking BOOLEAN DEFAULT false,
+    scheduled_for TIMESTAMPTZ DEFAULT NULL
 );
 
 ALTER TABLE public.live_queue ENABLE ROW LEVEL SECURITY;
@@ -1028,17 +1132,19 @@ BEGIN
 
     -- Only mirror active tokens for the current business day.
     -- Completed, cancelled, skipped tokens are removed from live view.
-    IF NEW.status IN ('waiting', 'called', 'serving') AND NEW.date = v_today THEN
+    IF NEW.status IN ('waiting', 'called', 'serving', 'scheduled') AND NEW.date = v_today THEN
         INSERT INTO public.live_queue (
             id, salon_id, token_number, status,
             service_id, worker_id,
             created_at, called_at, started_at,
-            guest_name, guest_phone
+            guest_name, guest_phone,
+            is_booking, scheduled_for
         ) VALUES (
             NEW.id, NEW.salon_id, NEW.token_number, NEW.status,
             NEW.service_id, NEW.worker_id,
             NEW.created_at, NEW.called_at, NEW.started_at,
-            NEW.guest_name, NEW.guest_phone
+            NEW.guest_name, NEW.guest_phone,
+            NEW.is_booking, NEW.scheduled_for
         )
         ON CONFLICT (id) DO UPDATE SET
             status      = EXCLUDED.status,
@@ -1046,7 +1152,9 @@ BEGIN
             called_at   = EXCLUDED.called_at,
             started_at  = EXCLUDED.started_at,
             guest_name  = EXCLUDED.guest_name,
-            guest_phone = EXCLUDED.guest_phone;
+            guest_phone = EXCLUDED.guest_phone,
+            is_booking  = EXCLUDED.is_booking,
+            scheduled_for = EXCLUDED.scheduled_for;
     ELSE
         -- Token is inactive or from a previous day — remove from live view
         DELETE FROM public.live_queue WHERE id = NEW.id;
@@ -1121,3 +1229,21 @@ BEGIN
     RETURN NEW;
 END;
 $$;
+C R E A T E   T A B L E   I F   N O T   E X I S T S   p u b l i c . p u s h _ s u b s c r i p t i o n s   (   i d   U U I D   P R I M A R Y   K E Y   D E F A U L T   g e n _ r a n d o m _ u u i d ( ) ,   c u s t o m e r _ i d   U U I D   N O T   N U L L   R E F E R E N C E S   p u b l i c . p r o f i l e s ( i d )   O N   D E L E T E   C A S C A D E ,   e n d p o i n t   T E X T   N O T   N U L L   U N I Q U E ,   p 2 5 6 d h   T E X T   N O T   N U L L ,   a u t h   T E X T   N O T   N U L L ,   c r e a t e d _ a t   T I M E S T A M P T Z   D E F A U L T   N O W ( ) ,   u p d a t e d _ a t   T I M E S T A M P T Z   D E F A U L T   N O W ( )   ) ;   C R E A T E   I N D E X   I F   N O T   E X I S T S   i d x _ p u s h _ s u b s _ c u s t o m e r _ i d   O N   p u b l i c . p u s h _ s u b s c r i p t i o n s ( c u s t o m e r _ i d ) ;   A L T E R   T A B L E   p u b l i c . p u s h _ s u b s c r i p t i o n s   E N A B L E   R O W   L E V E L   S E C U R I T Y ;   C R E A T E   P O L I C Y   \  
+ U s e r s  
+ c a n  
+ m a n a g e  
+ o w n  
+ p u s h  
+ s u b s c r i p t i o n s \   O N   p u b l i c . p u s h _ s u b s c r i p t i o n s   F O R   A L L   U S I N G   ( a u t h . u i d ( )   =   c u s t o m e r _ i d )   W I T H   C H E C K   ( a u t h . u i d ( )   =   c u s t o m e r _ i d ) ;  
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   p u b l i c . l o y a l t y _ r e w a r d s   (   i d   U U I D   P R I M A R Y   K E Y   D E F A U L T   g e n _ r a n d o m _ u u i d ( ) ,   c u s t o m e r _ i d   U U I D   N O T   N U L L   R E F E R E N C E S   p u b l i c . p r o f i l e s ( i d )   O N   D E L E T E   C A S C A D E ,   r e w a r d _ t i t l e   T E X T   N O T   N U L L ,   p o i n t s _ s p e n t   I N T   N O T   N U L L ,   s t a t u s   T E X T   N O T   N U L L   D E F A U L T   ' a c t i v e '   C H E C K   ( s t a t u s   I N   ( ' a c t i v e ' ,   ' u s e d ' ,   ' e x p i r e d ' ) ) ,   c r e a t e d _ a t   T I M E S T A M P T Z   D E F A U L T   N O W ( ) ,   u p d a t e d _ a t   T I M E S T A M P T Z   D E F A U L T   N O W ( )   ) ;   C R E A T E   I N D E X   I F   N O T   E X I S T S   i d x _ l o y a l t y _ r e w a r d s _ c u s t o m e r   O N   p u b l i c . l o y a l t y _ r e w a r d s ( c u s t o m e r _ i d ,   s t a t u s ) ;   A L T E R   T A B L E   p u b l i c . l o y a l t y _ r e w a r d s   E N A B L E   R O W   L E V E L   S E C U R I T Y ;   C R E A T E   P O L I C Y   \  
+ C u s t o m e r s  
+ c a n  
+ v i e w  
+ o w n  
+ r e w a r d s \   O N   p u b l i c . l o y a l t y _ r e w a r d s   F O R   S E L E C T   U S I N G   ( a u t h . u i d ( )   =   c u s t o m e r _ i d ) ;   C R E A T E   P O L I C Y   \ S a l o n  
+ s t a f f  
+ c a n  
+ v i e w  
+ r e w a r d s \   O N   p u b l i c . l o y a l t y _ r e w a r d s   F O R   S E L E C T   U S I N G   (   a u t h . u i d ( )   I N   ( S E L E C T   o w n e r _ i d   F R O M   p u b l i c . s a l o n s )   O R   a u t h . u i d ( )   I N   ( S E L E C T   u s e r _ i d   F R O M   p u b l i c . w o r k e r s )   ) ;  
+ 

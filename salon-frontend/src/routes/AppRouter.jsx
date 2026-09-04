@@ -27,6 +27,7 @@ import { useToast } from '../context/ToastContext'
 import CustomerLayout from '../layouts/CustomerLayout'
 import AdminLayout    from '../layouts/AdminLayout'
 import SuperAdminLayout from '../layouts/SuperAdminLayout'
+import WorkerLayout     from '../layouts/WorkerLayout'
 
 // Auth pages — lazy loaded to reduce bundle size
 const Login           = lazy(() => import('../pages/auth/Login'))
@@ -74,11 +75,15 @@ const SuperSubscriptions = lazy(() => import('../pages/superadmin/Subscriptions'
 const SuperAds           = lazy(() => import('../pages/superadmin/Advertisements'))
 const PlatformAnalytics  = lazy(() => import('../pages/superadmin/PlatformAnalytics'))
 
+// ─── Worker pages ─────────────────────────────────────────────────────────────
+const WorkerDashboard    = lazy(() => import('../pages/worker/Dashboard'))
+
 // ─── Role constants ───────────────────────────────────────────────────────────
-const ADMIN_ROLES    = ['salon_owner', 'worker']
+const ADMIN_ROLES    = ['salon_owner']
 const OWNER_ROLES    = ['salon_owner']
 const SUPER_ROLES    = ['super_admin']
 const CUSTOMER_ROLES = ['customer']
+const WORKER_ROLES   = ['worker']
 const ALL_ROLES      = ['customer', 'worker', 'salon_owner', 'super_admin']
 
 // Reuse the existing branded LoadingScreen as the Suspense fallback.
@@ -258,7 +263,14 @@ export default function AppRouter() {
         } />
       </Route>
 
-      {/* ─── Catch-all ─── */}
+      {/* ─── Worker ─── */}
+      <Route path="/worker" element={
+        <ProtectedRoute roles={WORKER_ROLES}><WorkerLayout /></ProtectedRoute>
+      }>
+        <Route index element={<WorkerDashboard />} />
+      </Route>
+
+      {/* Fallback route */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
     </>

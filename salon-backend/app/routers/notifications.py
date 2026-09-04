@@ -1,9 +1,15 @@
 from uuid import UUID
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel
 from ..dependencies import get_current_user
 from ..database import supabase_admin
 
 router = APIRouter(prefix="/api/notifications", tags=["Notifications"])
+
+class PushSubscription(BaseModel):
+    endpoint: str
+    keys: dict
+
 
 
 @router.get("")
@@ -30,3 +36,29 @@ def mark_one_read(notification_id: UUID, user: dict = Depends(get_current_user))
     if not res.data:
         raise HTTPException(status_code=404, detail="Notification not found")
     return res.data[0]
+
+@router.post("/push/subscribe", summary="Subscribe to web push notifications")
+def subscribe_push(sub: PushSubscription, user: dict = Depends(get_current_user)):
+    user_id = user.get("sub")
+    data = {
+        "customer_id": user_id,
+        "endpoint": sub.endpoint,
+        "p256dh": sub.keys.get("p256dh", ""),
+        "auth": sub.keys.get("auth", "")
+    }
+    
+    # Upsert the subscription
+    res = supabase_admin.table("push_subscriptions").upsert(
+        data, on_conflict="endpoint"
+    ).execute()
+    
+    return {"success": True, "message": "Subscribed successfully"}
+
+@router.post("/push/unsubscribe", summary="Unsubscribe from web push notifications")
+async def unsubscribe_push(request: Request, user: dict = Depends(get_current_user)):
+    user_id = user.get("sub")
+    body = await request.json()
+    endpoint = body.get("endpoint")
+    if endpoint:
+        supabase_admin.table("push_subscriptions").delete().eq("endpoint", endpoint).eq("customer_id", user_id).execute()
+    return {"success": True, "message": "Unsubscribed successfully"}

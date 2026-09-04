@@ -70,6 +70,10 @@ class WorkerCreate(BaseModel):
         return _validate_photo_url(v)
 
 
+class WorkerProvisionAccount(BaseModel):
+    email: str = Field(..., min_length=5, max_length=150)
+    password: str = Field(..., min_length=6, max_length=100)
+
 class WorkerUpdate(BaseModel):
     user_id: Optional[UUID] = None
     name: Optional[str] = Field(None, min_length=1, max_length=100)

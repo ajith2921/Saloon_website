@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Edit2, Trash2, Scissors, Star } from 'lucide-react'
+import { Plus, Edit2, Trash2, Scissors, Star, Key } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useSalonWorkers } from '../../hooks/useApi'
 import { Modal, ConfirmModal, PageHeader, Card, Button, Input, Select, EmptyState, Skeleton } from '../../components/ui'
@@ -33,6 +33,9 @@ export default function Workers() {
   const [form, setForm]           = useState(EMPTY_FORM)
   const [saving, setSaving]       = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null) // worker to confirm delete
+  const [provisionTarget, setProvisionTarget] = useState(null)
+  const [provisionForm, setProvisionForm] = useState({ email: '', password: '' })
+  const [provisioning, setProvisioning] = useState(false)
 
   if (!salonId && !loading) return <NoSalonEmptyState />
 
@@ -125,6 +128,23 @@ export default function Workers() {
     }
   }
 
+  const handleProvisionSubmit = async (e) => {
+    e.preventDefault()
+    if (!provisionForm.email || !provisionForm.password) return showError('Email and password required')
+    setProvisioning(true)
+    try {
+      await api.post(`/api/workers/${provisionTarget.id}/provision`, provisionForm)
+      success(`Login account created for ${provisionTarget.name}`)
+      setProvisionTarget(null)
+      setProvisionForm({ email: '', password: '' })
+      refetch()
+    } catch (err) {
+      showError(err.response?.data?.detail || err.message || 'Failed to provision account')
+    } finally {
+      setProvisioning(false)
+    }
+  }
+
   return (
     <div className="max-w-5xl mx-auto">
       <PageHeader 
@@ -203,6 +223,20 @@ export default function Workers() {
                   <Trash2 className="w-3 h-3 mr-1" aria-hidden="true" /> Remove
                 </Button>
               </div>
+              
+              {!w.user_id ? (
+                <Button
+                  variant="outline"
+                  onClick={() => setProvisionTarget(w)}
+                  className="w-full mt-2 py-1.5 text-xs h-auto border-brand-500/30 text-brand-400 hover:bg-brand-500/10"
+                >
+                  <Key className="w-3 h-3 mr-1" /> Create Login Portal
+                </Button>
+              ) : (
+                <div className="mt-2 py-1.5 text-xs text-center text-green-400 bg-green-400/10 rounded-lg border border-green-400/20">
+                  Worker Portal Active
+                </div>
+              )}
             </Card>
           ))}
         </div>
@@ -359,6 +393,63 @@ export default function Workers() {
         confirmLabel="Yes, Remove"
         danger
       />
+
+      {/* Provision Worker Modal */}
+      <Modal
+        open={!!provisionTarget}
+        onClose={() => setProvisionTarget(null)}
+        title="Create Worker Login"
+      >
+        <form onSubmit={handleProvisionSubmit} className="flex flex-col gap-4">
+          <p className="text-sm text-dark-200">
+            Create a login account for <strong>{provisionTarget?.name}</strong> so they can access their personal Worker Portal to view their queue.
+          </p>
+          
+          <div>
+            <label className="block text-sm font-medium text-dark-100 mb-1.5" htmlFor="provision-email">Email Address <span aria-label="required">*</span></label>
+            <Input
+              id="provision-email"
+              type="email"
+              value={provisionForm.email}
+              onChange={(e) => setProvisionForm({ ...provisionForm, email: e.target.value })}
+              placeholder="worker@example.com"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-dark-100 mb-1.5" htmlFor="provision-password">Temporary Password <span aria-label="required">*</span></label>
+            <Input
+              id="provision-password"
+              type="text"
+              value={provisionForm.password}
+              onChange={(e) => setProvisionForm({ ...provisionForm, password: e.target.value })}
+              placeholder="e.g. Temp1234!"
+              required
+              minLength={6}
+            />
+            <p className="text-xs text-dark-300 mt-1">They can use this to log in at /login.</p>
+          </div>
+
+          <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-white/[0.06]">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setProvisionTarget(null)}
+              disabled={provisioning}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              loading={provisioning}
+            >
+              Create Account
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   )
 }

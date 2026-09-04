@@ -10,6 +10,7 @@ from ..dependencies import get_current_user, get_current_user_with_profile, requ
 from ..database import supabase_admin
 from ..limiter import limiter
 from ..services.sms import send_sms_notification
+from ..services.push import send_push_notification
 
 router = APIRouter(prefix="/api/tokens", tags=["Tokens"])
 
@@ -87,7 +88,7 @@ def get_my_active_token(user: dict = Depends(get_current_user)):
     res = supabase_admin.table("tokens").select(
         "*, salons(name, cover_image_url), services(name, price, duration_minutes), workers(name, photo_url)"
     ).eq("customer_id", user_id).eq("date", today).in_(
-        "status", ["waiting", "called", "serving"]  # include ALL active statuses
+        "status", ["waiting", "called", "serving", "scheduled"]  # include ALL active statuses
     ).order("created_at", desc=True).limit(1).execute()
 
     if not res.data:
@@ -164,8 +165,8 @@ def update_token_status(request: Request, token_id: UUID, action: str, backgroun
             raise HTTPException(status_code=403, detail="You can only cancel your own token")
         if action != "cancel":
             raise HTTPException(status_code=403, detail="Customers can only cancel tokens")
-        if t["status"] not in ("waiting", "called"):
-            raise HTTPException(status_code=400, detail="Can only cancel a waiting or called token")
+        if t["status"] not in ("waiting", "called", "scheduled"):
+            raise HTTPException(status_code=400, detail="Can only cancel a waiting, called, or scheduled token")
 
     elif db_role in ("salon_owner", "worker"):
         require_salon_access(user, t["salon_id"], {"salon_owner", "worker"})
@@ -181,7 +182,7 @@ def update_token_status(request: Request, token_id: UUID, action: str, backgroun
 
     # Enforce the real queue lifecycle rather than allowing arbitrary jumps.
     allowed_previous_states = {
-        "call": {"waiting"},
+        "call": {"waiting", "scheduled"},
         "start": {"called"},
         "complete": {"serving"},
         "skip": {"waiting", "called"},
@@ -229,6 +230,11 @@ def update_token_status(request: Request, token_id: UUID, action: str, backgroun
         if phone_number:
             message = f"Hi {first_name}, it's your turn at {salon_name}! Please head to the counter."
             background_tasks.add_task(send_sms_notification, phone_number, message)
+        
+        if t.get("customer_id"):
+            push_title = "It's your turn!"
+            push_body = f"Please head to the counter at {salon_name}."
+            background_tasks.add_task(send_push_notification, t["customer_id"], push_title, push_body, f"/my-token")
 
     return updated_token
 

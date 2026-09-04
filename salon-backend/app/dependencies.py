@@ -100,6 +100,8 @@ def get_current_user_with_profile(user: dict = Depends(get_current_user)) -> Dic
     if cached:
         user["db_role"] = cached["db_role"]
         user["db_salon_id"] = cached["db_salon_id"]
+        if cached.get("db_worker_id"):
+            user["db_worker_id"] = cached["db_worker_id"]
         return user
 
     # --- Cache miss: resolve role + salon from DB ---
@@ -109,21 +111,25 @@ def get_current_user_with_profile(user: dict = Depends(get_current_user)) -> Dic
 
     db_role = res.data.get("role", "customer")
     db_salon_id = None
+    db_worker_id = None
 
     if db_role == "salon_owner":
         salon_res = supabase_admin.table("salons").select("id").eq("owner_id", user_id).limit(1).execute()
         if salon_res.data:
             db_salon_id = salon_res.data[0]["id"]
     elif db_role == "worker":
-        worker_res = supabase_admin.table("workers").select("salon_id").eq("user_id", user_id).limit(1).execute()
+        worker_res = supabase_admin.table("workers").select("id, salon_id").eq("user_id", user_id).limit(1).execute()
         if worker_res.data:
             db_salon_id = worker_res.data[0]["salon_id"]
+            db_worker_id = worker_res.data[0]["id"]
 
     user["db_role"] = db_role
     user["db_salon_id"] = db_salon_id
+    if db_worker_id:
+        user["db_worker_id"] = db_worker_id
 
     # Store resolved profile in cache for subsequent requests
-    _set_cached_profile(user_id, {"db_role": db_role, "db_salon_id": db_salon_id})
+    _set_cached_profile(user_id, {"db_role": db_role, "db_salon_id": db_salon_id, "db_worker_id": db_worker_id})
 
     return user
 

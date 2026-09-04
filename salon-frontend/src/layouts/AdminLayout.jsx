@@ -1,14 +1,14 @@
 import { Outlet, NavLink } from 'react-router-dom'
 import { useState } from 'react'
 import AdminSidebar from '../components/navigation/AdminSidebar'
-import { Bell, LayoutDashboard, Ticket, Users, Settings } from 'lucide-react'
+import { Bell, LayoutDashboard, Ticket, Users, Settings, Clock, LogOut } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import LanguageSwitcher from '../components/LanguageSwitcher'
+import Button from '../components/ui/Button'
 
 export default function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false)
-  const { isOwner } = useAuth()
-
+  const { isOwner, profile, signOut } = useAuth()
   const mobileNav = isOwner ? [
     { to: '/admin', icon: LayoutDashboard, label: 'Dash' },
     { to: '/admin/queue', icon: Ticket, label: 'Queue' },
@@ -17,6 +17,32 @@ export default function AdminLayout() {
   ] : [
     { to: '/admin/queue', icon: Ticket, label: 'Queue' },
   ]
+
+  const isPending = isOwner && profile?.salons?.[0]?.status === 'pending'
+
+  if (isPending) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface-primary p-6">
+        <div className="max-w-md w-full bg-surface-secondary border border-white/[0.06] rounded-3xl p-8 text-center space-y-6 shadow-2xl">
+          <div className="w-16 h-16 bg-brand-500/10 text-brand-400 rounded-full flex items-center justify-center mx-auto">
+            <Clock className="w-8 h-8" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-white mb-2">Application Under Review</h1>
+            <p className="text-dark-200 text-sm leading-relaxed">
+              Your salon application is currently being reviewed by our super admins. We will notify you once it has been approved. 
+            </p>
+          </div>
+          <div className="pt-4 border-t border-white/[0.06]">
+            <Button variant="secondary" onClick={signOut} className="w-full">
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-surface-primary">

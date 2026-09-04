@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { useMyToken } from '../../hooks/useApi'
 import { useRealtimeToken, useRealtimeQueue } from '../../hooks/useRealtime'
+import { usePushNotifications } from '../../hooks/usePushNotifications'
 import { useToast } from '../../context/ToastContext'
 import { TokenBadge, Skeleton, EmptyState, ConfirmModal, Card, Button, PageHeader } from '../../components/ui'
 import { useTranslation } from 'react-i18next'
@@ -48,6 +49,7 @@ export default function MyToken() {
   const { t } = useTranslation()
   const { data, loading, refetch } = useMyToken()
   const { success, warning, info } = useToast()
+  const { isSupported, isSubscribed, permission, loading: pushLoading, subscribe, unsubscribe } = usePushNotifications()
   const [cancelling, setCancelling] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
 
@@ -251,20 +253,42 @@ export default function MyToken() {
             </Button>
           </Link>
         </div>
-
-        {/* Styled confirmation modal — replaces window.confirm() */}
-        <ConfirmModal
-          open={confirmOpen}
-          onCancel={() => setConfirmOpen(false)}
-          onConfirm={handleCancelConfirm}
-          title="Cancel Your Token?"
-          message="Are you sure you want to cancel your queue token? You will lose your position and will need to get a new token."
-          confirmLabel="Yes, Cancel Token"
-          danger
-        />
       </Card>
 
-      <p className="text-xs text-dark-200 text-center flex items-center justify-center gap-1">
+      {/* Styled confirmation modal — replaces window.confirm() */}
+      <ConfirmModal
+        open={confirmOpen}
+        onCancel={() => setConfirmOpen(false)}
+        onConfirm={handleCancelConfirm}
+        title="Cancel Your Token?"
+        message="Are you sure you want to cancel your queue token? You will lose your position and will need to get a new token."
+        confirmLabel="Yes, Cancel Token"
+        danger
+      />
+
+      {isSupported && permission !== 'denied' && (
+        <Card className="p-4 mb-4 mt-6">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <Bell className="w-5 h-5 text-brand-400" />
+              <div>
+                <p className="font-bold text-white text-sm">Get Notified</p>
+                <p className="text-xs text-dark-200">Alert me when it's my turn</p>
+              </div>
+            </div>
+            <Button 
+              size="sm" 
+              variant={isSubscribed ? "secondary" : "primary"} 
+              loading={pushLoading}
+              onClick={isSubscribed ? unsubscribe : subscribe}
+            >
+              {isSubscribed ? 'Disable' : 'Enable'}
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      <p className="text-xs text-dark-200 text-center flex items-center justify-center gap-1 mt-4">
         <AlertTriangle className="w-3 h-3" />
         Queue updates automatically. No need to refresh.
       </p>
