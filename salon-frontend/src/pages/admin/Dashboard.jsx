@@ -1,3 +1,4 @@
+import { useLocation } from 'react-router-dom'
 import { Users, Ticket, CheckCircle, TrendingUp, AlertTriangle, RefreshCw, DollarSign, CalendarClock } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useSalonStats } from '../../hooks/useApi'
@@ -5,14 +6,16 @@ import { StatCard, PageHeader, Card, Button, Skeleton } from '../../components/u
 import NoSalonEmptyState from '../../components/ui/NoSalonEmptyState'
 
 export default function Dashboard() {
-  const { profile } = useAuth()
+  const { profile, loading: authLoading } = useAuth()
+  const { state } = useLocation()
   // db_salon_id is resolved by the backend profile query (authoritative)
-  // fallback to salons[0] for legacy compatibility while profile is loading
-  const salonId = profile?.db_salon_id ?? profile?.salons?.[0]?.id
+  // fallback to salons[0] for legacy compatibility, and newSalonId from nav state
+  // for the brief window before async refreshProfile() resolves after registration.
+  const salonId = profile?.db_salon_id ?? profile?.salons?.[0]?.id ?? state?.newSalonId
 
   const { data: stats, loading, refetch } = useSalonStats(salonId)
 
-  if (!salonId && !loading) return <NoSalonEmptyState />
+  if (!salonId && !loading && !authLoading) return <NoSalonEmptyState />
 
   return (
     <div className="max-w-5xl mx-auto">

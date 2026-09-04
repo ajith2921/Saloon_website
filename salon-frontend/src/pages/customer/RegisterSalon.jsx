@@ -101,7 +101,7 @@ export default function RegisterSalon() {
           currency: currency,
           handler: function (response) {
             success("Payment successful! Welcome to QueueCut.")
-            navigate('/admin')
+            navigate('/admin', { state: { newSalonId } })
           },
           modal: {
             ondismiss: function() {
@@ -117,7 +117,7 @@ export default function RegisterSalon() {
       } else {
         // Free plan
         success("Shop registered successfully! Welcome aboard.")
-        navigate('/admin')
+        navigate('/admin', { state: { newSalonId } })
       }
       
     } catch (err) {
