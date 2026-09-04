@@ -1,24 +1,38 @@
 import { useLocation } from 'react-router-dom'
-import { Users, Ticket, CheckCircle, TrendingUp, AlertTriangle, RefreshCw, DollarSign, CalendarClock } from 'lucide-react'
+import { Users, Ticket, CheckCircle, TrendingUp, AlertTriangle, RefreshCw, DollarSign, CalendarClock, Info } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { useSalonStats } from '../../hooks/useApi'
+import { useSalonStats, useSalon } from '../../hooks/useApi'
 import { StatCard, PageHeader, Card, Button, Skeleton } from '../../components/ui'
 import NoSalonEmptyState from '../../components/ui/NoSalonEmptyState'
 
 export default function Dashboard() {
   const { profile, loading: authLoading } = useAuth()
   const { state } = useLocation()
-  // db_salon_id is resolved by the backend profile query (authoritative)
-  // fallback to salons[0] for legacy compatibility, and newSalonId from nav state
-  // for the brief window before async refreshProfile() resolves after registration.
+  
   const salonId = profile?.db_salon_id ?? profile?.salons?.[0]?.id ?? state?.newSalonId
 
-  const { data: stats, loading, refetch } = useSalonStats(salonId)
+  const { data: salon, loading: salonLoading } = useSalon(salonId)
+  const { data: stats, loading: statsLoading, refetch } = useSalonStats(salonId)
+
+  const loading = statsLoading || salonLoading
 
   if (!salonId && !loading && !authLoading) return <NoSalonEmptyState />
 
   return (
     <div className="max-w-5xl mx-auto">
+      {salon?.status === 'pending' && (
+        <div className="mb-6 flex items-start gap-3 bg-brand-500/10 border border-brand-500/20 rounded-xl p-4">
+          <Info className="w-5 h-5 text-brand-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-brand-400 mb-1">Salon Pending Approval</p>
+            <p className="text-xs text-dark-100 leading-relaxed">
+              Your salon has been registered and is currently pending administrator approval. 
+              You can configure your services and workers in the meantime, but public customers cannot see your salon yet.
+            </p>
+          </div>
+        </div>
+      )}
+
       <PageHeader 
         title="Overview"
         action={
