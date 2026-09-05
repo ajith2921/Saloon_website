@@ -45,4 +45,4 @@ pytest>=8.0.0
 pytest-asyncio>=0.23.0
 twilio==9.3.2
 pywebpush==1.14.0  
- 
+resend>=2.1.0

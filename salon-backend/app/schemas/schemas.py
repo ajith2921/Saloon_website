@@ -16,6 +16,8 @@ def _validate_photo_url(v: Optional[str]) -> Optional[str]:
     if v is None:
         return v
     v = v.strip()
+    if not v:
+        return None
     if not v.startswith('https://'):
         raise ValueError('photo_url must use HTTPS')
     # Extract host

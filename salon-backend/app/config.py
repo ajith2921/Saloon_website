@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     twilio_auth_token: Optional[str] = None
     twilio_phone_number: Optional[str] = None
 
+    # Resend Email Configuration
+    resend_api_key: Optional[str] = None
+
+
     # Platform fee per token (configurable, not hardcoded)
     platform_fee_per_token: float = 5.0
 

@@ -83,6 +83,53 @@ function PendingSalonCard({ salon, onAction }) {
   )
 }
 
+/** Card for granting a free setup by email */
+function GrantFreeSetupCard() {
+  const [email, setEmail] = useState('')
+  const [loading, setLoading] = useState(false)
+  const { success, error: showError } = useToast()
+
+  const handleGrant = async (e) => {
+    e.preventDefault()
+    if (!email) return
+    setLoading(true)
+    try {
+      await api.post('/api/super-admin/grant-free-setup', { email })
+      success(`Free setup granted to ${email}`)
+      setEmail('')
+    } catch (err) {
+      showError(err.response?.data?.detail || 'Failed to grant free setup')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Card className="p-5">
+      <div className="flex items-center gap-2 mb-4">
+        <Ticket className="w-5 h-5 text-brand-400" />
+        <h2 className="text-base font-bold text-white">Grant Free Setup</h2>
+      </div>
+      <p className="text-sm text-dark-200 mb-4">
+        Allow a user to set up their salon for free. They will bypass the subscription payment.
+      </p>
+      <form onSubmit={handleGrant} className="flex flex-col sm:flex-row gap-2">
+        <input
+          type="email"
+          placeholder="Enter user email..."
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="flex-1 bg-background border border-white/[0.06] rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500"
+          required
+        />
+        <Button type="submit" loading={loading} disabled={!email}>
+          Grant Access
+        </Button>
+      </form>
+    </Card>
+  )
+}
+
 export default function Dashboard() {
   const { data, loading, error, refetch } = useFetch('/api/super-admin/stats')
   const { data: pendingData, loading: pendingLoading, error: pendingError, refetch: refetchPending } = useFetch('/api/super-admin/salons/pending')
@@ -140,7 +187,8 @@ export default function Dashboard() {
 
       {/* ── Lower section ── */}
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* Pending Approvals */}
+        <div className="space-y-6">
+          {/* Pending Approvals */}
         <Card className="p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-base font-bold text-white">Pending Approvals</h2>
@@ -172,6 +220,10 @@ export default function Dashboard() {
             </div>
           )}
         </Card>
+
+        {/* Grant Free Setup */}
+        <GrantFreeSetupCard />
+        </div>
 
         {/* Platform snapshot */}
         <Card className="p-5">

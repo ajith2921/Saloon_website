@@ -4,7 +4,12 @@ from typing import Optional
 from ..dependencies import require_role
 from ..database import supabase_admin
 from ..limiter import limiter
+from ..config import settings
 import logging
+import resend
+
+if settings.resend_api_key:
+    resend.api_key = settings.resend_api_key
 
 logger = logging.getLogger(__name__)
 
@@ -232,3 +237,49 @@ def update_token_limit(
     return {"status": "success", "salon": res.data[0]}
 
 
+class GrantFreeSetupRequest(BaseModel):
+    email: str
+
+@router.post("/grant-free-setup")
+@limiter.limit("10/minute")
+def grant_free_setup(
+    request: Request,
+    payload: GrantFreeSetupRequest,
+    user: dict = Depends(require_role("super_admin"))
+):
+    """Grant a free setup to a specific email address."""
+    email = payload.email.lower().strip()
+    actor_id = user.get("sub")
+    
+    # Check if already granted
+    existing = supabase_admin.table("free_setups").select("*").eq("email", email).execute()
+    if existing.data:
+        raise HTTPException(status_code=400, detail="Free setup already granted to this email")
+        
+    res = supabase_admin.table("free_setups").insert({
+        "email": email,
+        "granted_by": actor_id,
+        "status": "pending"
+    }).execute()
+    
+    if not res.data:
+        raise HTTPException(status_code=500, detail="Failed to grant free setup")
+        
+    _log_audit(actor_id, "GRANT_FREE_SETUP", email, "email")
+    
+    # Trigger an email via Resend if configured
+    if settings.resend_api_key:
+        try:
+            resend.Emails.send({
+                "from": "QueueCut <onboarding@yourdomain.com>",
+                "to": email,
+                "subject": "You've been granted a Free Salon Setup!",
+                "html": f"<p>Hello,</p><p>You have been granted a free setup for your salon on our platform.</p><p>Please log in and create your salon to instantly activate your free subscription.</p>"
+            })
+            logger.info(f"Free setup email sent successfully to {email}")
+        except Exception as e:
+            logger.error(f"Failed to send email to {email}: {e}")
+    else:
+        logger.info(f"Mock Email Sent to {email}: You have been granted a free salon setup!")
+    
+    return {"status": "success", "message": f"Free setup granted to {email}", "data": res.data[0]}

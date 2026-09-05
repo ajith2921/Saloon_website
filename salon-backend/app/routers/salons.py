@@ -33,6 +33,8 @@ def _validate_public_url(v: Optional[str]) -> Optional[str]:
     if v is None:
         return v
     v = v.strip()
+    if not v:
+        return None
     if not v.startswith(('https://', 'http://')):
         raise ValueError('URL must use http or https')
     try:
@@ -263,9 +265,17 @@ def create_salon(request: Request, data: SalonCreate, user: dict = Depends(get_c
     payload = {k: v for k, v in data.model_dump().items() if v is not None}
     payload["owner_id"] = user.get("sub") or user.get("id")
     
+    # Check for pending free setup
+    user_email = user.get("email")
+    free_setup = None
+    if user_email:
+        free_setup_res = supabase_admin.table("free_setups").select("*").eq("email", user_email).eq("status", "pending").execute()
+        if free_setup_res.data:
+            free_setup = free_setup_res.data[0]
+
     # New salons start as pending if created by a customer/owner.
     # Super admins can theoretically bypass this later via approve endpoint.
-    payload["status"] = "pending"
+    payload["status"] = "active" if free_setup else "pending"
 
     # Insert into salons
     res = supabase_admin.table("salons").insert(payload).execute()
@@ -274,6 +284,27 @@ def create_salon(request: Request, data: SalonCreate, user: dict = Depends(get_c
     
     new_salon = res.data[0]
     
+    # Handle free setup activation
+    if free_setup:
+        import datetime
+        supabase_admin.table("free_setups").update({
+            "status": "used",
+            "used_at": datetime.datetime.utcnow().isoformat(),
+            "salon_id": str(new_salon["id"])
+        }).eq("id", free_setup["id"]).execute()
+        
+        # Give them an active subscription
+        # Just grab any active plan for now (e.g. the first one)
+        plan_res = supabase_admin.table("subscription_plans").select("id").eq("is_active", True).execute()
+        if plan_res.data:
+            plan_id = plan_res.data[0]["id"]
+            supabase_admin.table("subscriptions").insert({
+                "salon_id": str(new_salon["id"]),
+                "plan_id": plan_id,
+                "status": "active",
+                "provider_subscription_id": f"free_setup_{str(free_setup['id'])[:8]}"
+            }).execute()
+
     # Upgrade role to salon_owner if they are currently just a customer
     if db_role == "customer":
         supabase_admin.table("profiles").update({"role": "salon_owner"}).eq("id", payload["owner_id"]).execute()
