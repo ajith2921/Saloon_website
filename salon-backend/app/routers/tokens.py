@@ -63,6 +63,7 @@ def create_token(request: Request, token: TokenCreate, user: dict = Depends(get_
             "WORKER_UNAVAILABLE": (400, "Selected worker is unavailable at this salon"),
             "ACTIVE_TOKEN_EXISTS": (400, "You already have an active token at this salon for today."),
             "CUSTOMER_ALREADY_IN_QUEUE": (400, "You already have an active token in the live queue for today."),
+            "DAILY_TOKEN_LIMIT_PER_USER_REACHED": (400, "You can only generate one token per day across all salons."),
             "DAILY_TOKEN_LIMIT_REACHED": (400, "This salon has reached its daily token limit. Please try tomorrow."),
             "CUSTOMER_OR_GUEST_REQUIRED": (400, "Customer or guest name is required."),
             "SCHEDULED_TIME_REQUIRED_FOR_BOOKING": (400, "A scheduled time is required for an appointment booking."),
