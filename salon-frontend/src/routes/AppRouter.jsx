@@ -85,7 +85,6 @@ const SUPER_ROLES    = ['super_admin']
 const CUSTOMER_ROLES = ['customer']
 const WORKER_ROLES   = ['worker']
 const ALL_ROLES      = ['customer', 'worker', 'salon_owner', 'super_admin']
-
 // Reuse the existing branded LoadingScreen as the Suspense fallback.
 function PageLoader() {
   return <LoadingScreen />
@@ -98,11 +97,16 @@ function ColdStartListener() {
     let toastId = null;
     
     const onColdStart = () => {
-      toastId = info('Waking up the server... This might take a few seconds.', 'Connecting', { autoClose: false });
+      if (!toastId) {
+        toastId = info('Waking up the server... This might take a few seconds.', 'Connecting', { autoClose: false });
+      }
     };
     
     const onResolved = () => {
-      if (toastId) dismiss(toastId);
+      if (toastId) {
+        dismiss(toastId);
+        toastId = null;
+      }
     };
 
     window.addEventListener('api-cold-start', onColdStart);

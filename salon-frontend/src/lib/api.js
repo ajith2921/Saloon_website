@@ -1,6 +1,8 @@
 import axios from 'axios'
 import { supabase } from './supabase'
 
+let coldStartCount = 0;
+
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'https://saloon-website-3vjr.onrender.com',
   timeout: 60000,
@@ -18,7 +20,11 @@ api.interceptors.request.use(async (config) => {
   
   // Start a timer for cold-starts
   config.coldStartTimer = setTimeout(() => {
-    window.dispatchEvent(new CustomEvent('api-cold-start'));
+    coldStartCount++;
+    if (coldStartCount === 1) {
+      window.dispatchEvent(new CustomEvent('api-cold-start'));
+    }
+    config.hasTriggeredColdStart = true;
   }, 3000);
   
   return config
@@ -28,12 +34,22 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (response) => {
     if (response.config?.coldStartTimer) clearTimeout(response.config.coldStartTimer);
-    window.dispatchEvent(new CustomEvent('api-cold-start-resolved'));
+    if (response.config?.hasTriggeredColdStart) {
+      coldStartCount = Math.max(0, coldStartCount - 1);
+      if (coldStartCount === 0) {
+        window.dispatchEvent(new CustomEvent('api-cold-start-resolved'));
+      }
+    }
     return response;
   },
   async (error) => {
     if (error.config?.coldStartTimer) clearTimeout(error.config.coldStartTimer);
-    window.dispatchEvent(new CustomEvent('api-cold-start-resolved'));
+    if (error.config?.hasTriggeredColdStart) {
+      coldStartCount = Math.max(0, coldStartCount - 1);
+      if (coldStartCount === 0) {
+        window.dispatchEvent(new CustomEvent('api-cold-start-resolved'));
+      }
+    }
     
     const status = error.response?.status
 

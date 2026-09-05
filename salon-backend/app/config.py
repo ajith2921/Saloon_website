@@ -28,12 +28,15 @@ class Settings(BaseSettings):
 
     @property
     def allowed_origins(self) -> List[str]:
-        origins = [origin.strip() for origin in self.frontend_url.split(",") if origin.strip()]
+        # Strip whitespace and trailing slashes to ensure strict CORS matching
+        origins = [origin.strip().rstrip('/') for origin in self.frontend_url.split(",") if origin.strip()]
+        
         if "https://saloon-website-ashen.vercel.app" not in origins:
             origins.append("https://saloon-website-ashen.vercel.app")
         # Also allow local dev
         if "http://localhost:5173" not in origins:
             origins.append("http://localhost:5173")
+            
         return origins
 
     class Config:
