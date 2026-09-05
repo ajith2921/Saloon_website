@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Plus, Edit2, Trash2, Scissors, Star, Key } from 'lucide-react'
+import { Plus, Edit2, Trash2, Scissors, Star, Key, Image } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 import { useSalonWorkers } from '../../hooks/useApi'
 import { Modal, ConfirmModal, PageHeader, Card, Button, Input, Select, EmptyState, Skeleton } from '../../components/ui'
 import NoSalonEmptyState from '../../components/ui/NoSalonEmptyState'
 import api from '../../lib/api'
 import { useToast } from '../../context/ToastContext'
+import { supabase } from '../../lib/supabase'
 
 const EMPTY_FORM = {
   name: '',
@@ -36,6 +37,40 @@ export default function Workers() {
   const [provisionTarget, setProvisionTarget] = useState(null)
   const [provisionForm, setProvisionForm] = useState({ email: '', password: '' })
   const [provisioning, setProvisioning] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (file.size > 5 * 1024 * 1024) {
+      showError('Image must be less than 5MB')
+      return
+    }
+
+    setUploadingImage(true)
+    try {
+      const fileExt = file.name.split('.').pop()
+      const fileName = `${salonId}_worker_${Math.random().toString(36).slice(2)}.${fileExt}`
+      
+      const { error: uploadError } = await supabase
+        .storage.from('salon-images')
+        .upload(fileName, file, { upsert: true })
+
+      if (uploadError) throw uploadError
+
+      const { data: { publicUrl } } = supabase
+        .storage.from('salon-images').getPublicUrl(fileName)
+
+      setForm(f => ({ ...f, photo_url: publicUrl }))
+      success('Photo uploaded successfully!')
+    } catch (err) {
+      showError('Failed to upload photo')
+      console.error(err)
+    } finally {
+      setUploadingImage(false)
+    }
+  }
 
   if (!salonId && !loading) return <NoSalonEmptyState />
 
@@ -304,16 +339,30 @@ export default function Workers() {
             </div>
           </div>
 
-          {/* Photo URL */}
+          {/* Photo Upload */}
           <div>
-            <label className="block text-sm font-medium text-dark-100 mb-1.5" htmlFor="worker-photo">Photo URL (optional)</label>
-            <Input
-              id="worker-photo"
-              name="photo_url"
-              value={form.photo_url}
-              onChange={handleChange}
-              placeholder="https://..."
-            />
+            <label className="block text-sm font-medium text-dark-100 mb-1.5">Worker Photo (optional)</label>
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-xl bg-surface-tertiary flex items-center justify-center overflow-hidden border border-white/5 shrink-0">
+                {form.photo_url ? (
+                  <img src={form.photo_url} alt="Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <Image className="w-6 h-6 text-dark-300" />
+                )}
+              </div>
+              <div className="flex-1">
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  disabled={uploadingImage}
+                  className="text-sm cursor-pointer file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand-500/10 file:text-brand-400 hover:file:bg-brand-500/20"
+                />
+                <p className="text-xs text-dark-300 mt-1">
+                  {uploadingImage ? 'Uploading...' : 'Recommended size: 256x256px. Max 5MB.'}
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Shift Schedule */}
