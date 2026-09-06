@@ -76,9 +76,6 @@ export default function RegisterSalon() {
       const salonRes = await api.post('/api/salons', payload)
       const newSalonId = salonRes.data?.id
       
-      // Refresh local session so frontend gets new role (salon_owner)
-      await refreshProfile()
-
       const selectedPlan = plans.find(p => p.id === selectedPlanId)
       
       // 2. If it's a paid plan, initiate checkout
@@ -99,12 +96,14 @@ export default function RegisterSalon() {
           name: 'QueueCut',
           description: `Subscription for ${formData.name}`,
           currency: currency,
-          handler: function (response) {
+          handler: async function (response) {
             success("Payment successful! Welcome to QueueCut.")
+            await refreshProfile()
             navigate('/admin', { state: { newSalonId } })
           },
           modal: {
-            ondismiss: function() {
+            ondismiss: async function() {
+              await refreshProfile()
               // If they dismiss, they are still a salon_owner but with a trialing/incomplete sub
               navigate('/admin/subscription')
             }
@@ -117,6 +116,7 @@ export default function RegisterSalon() {
       } else {
         // Free plan
         success("Shop registered successfully! Welcome aboard.")
+        await refreshProfile()
         navigate('/admin', { state: { newSalonId } })
       }
       
