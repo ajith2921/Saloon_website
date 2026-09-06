@@ -43,7 +43,12 @@ app.include_router(webhooks.router)
 from .database import supabase_admin
 
 from fastapi import Response
+from fastapi.responses import RedirectResponse
 from .database import get_async_supabase_admin
+
+@app.get("/")
+async def root():
+    return RedirectResponse(url="/docs" if not app.docs_url else app.docs_url, status_code=302) if app.docs_url else {"status": "ok", "message": "Welcome to Men's Salon Queue API. The API is running."}
 
 @app.get("/health")
 async def health_check(response: Response):
