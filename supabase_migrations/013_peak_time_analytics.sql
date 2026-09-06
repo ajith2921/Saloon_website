@@ -24,9 +24,10 @@ BEGIN
     'total_customers', (SELECT count(*) FROM public.profiles WHERE role = 'customer'),
     'total_tokens_today', (SELECT count(*) FROM public.tokens WHERE date = CURRENT_DATE),
     'platform_revenue_month', (
-      SELECT COALESCE(SUM(amount_paid), 0)
-      FROM public.subscriptions
-      WHERE current_period_end >= CURRENT_DATE
+      SELECT COALESCE(SUM(sp.price_monthly), 0)
+      FROM public.subscriptions s
+      JOIN public.subscription_plans sp ON s.plan_id = sp.id
+      WHERE s.current_period_end >= CURRENT_DATE
     )
   ) INTO v_totals;
 
