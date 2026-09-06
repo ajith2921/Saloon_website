@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts'
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts'
 import { Building2, Users, Ticket, TrendingUp, RefreshCw, Store, Activity, MapPin } from 'lucide-react'
 import { useFetch } from '../../hooks/useApi'
 import { StatCard, PageHeader, Card, Button, Skeleton, ErrorState, DateRangePicker } from '../../components/ui'
@@ -59,6 +59,17 @@ export default function PlatformAnalytics() {
   const avgRevenue = data?.active_salons
     ? Math.round((data.platform_revenue_month ?? 0) / data.active_salons)
     : null
+
+  const formatHour = (hour24) => {
+    if (hour24 === 0) return '12 AM'
+    if (hour24 === 12) return '12 PM'
+    return hour24 > 12 ? `${hour24 - 12} PM` : `${hour24} AM`
+  }
+
+  const formattedPeakTimes = (data?.peak_times ?? []).map(p => ({
+    ...p,
+    hourLabel: formatHour(p.hour)
+  }))
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -285,6 +296,36 @@ export default function PlatformAnalytics() {
                   </tbody>
                 </table>
               </div>
+            </Card>
+          </div>
+
+          {/* Peak Traffic Hours BarChart */}
+          <div className="mt-6">
+            <Card className="p-5">
+              <h2 className="text-sm font-bold text-white mb-6 uppercase tracking-wider">Peak Traffic Hours (Platform-Wide)</h2>
+              
+              {formattedPeakTimes.length === 0 ? (
+                <div className="h-64 flex items-center justify-center border-t border-white/5 mt-4">
+                  <p className="text-dark-200 text-sm">No hourly data available.</p>
+                </div>
+              ) : (
+                <div className="h-64 w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={formattedPeakTimes} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                      <XAxis dataKey="hourLabel" stroke="#ffffff50" fontSize={12} tickLine={false} axisLine={false} />
+                      <YAxis stroke="#ffffff50" fontSize={12} tickLine={false} axisLine={false} />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#18181b', borderColor: '#ffffff10', borderRadius: '12px' }}
+                        itemStyle={{ color: '#fff' }}
+                        formatter={(value) => [value, 'Tokens']}
+                        labelStyle={{ color: '#a1a1aa', marginBottom: '4px' }}
+                      />
+                      <Bar dataKey="count" fill="#d4821e" radius={[4, 4, 0, 0]} name="Tokens" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </Card>
           </div>
         </>
