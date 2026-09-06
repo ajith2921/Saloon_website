@@ -1,13 +1,15 @@
-import { Outlet, NavLink } from 'react-router-dom'
+import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import AdminSidebar from '../components/navigation/AdminSidebar'
-import { Bell, LayoutDashboard, Ticket, Users, Settings, Clock, LogOut } from 'lucide-react'
+import { Bell, LayoutDashboard, Ticket, Users, Settings, Clock, LogOut, CreditCard } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import Button from '../components/ui/Button'
 
 export default function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false)
+  const location = useLocation()
+  const navigate = useNavigate()
   const { isOwner, profile, signOut } = useAuth()
   const mobileNav = isOwner ? [
     { to: '/admin', icon: LayoutDashboard, label: 'Dash' },
@@ -19,8 +21,9 @@ export default function AdminLayout() {
   ]
 
   const isPending = isOwner && profile?.salons?.[0]?.status === 'pending'
+  const isSubscriptionRoute = location.pathname === '/admin/subscription'
 
-  if (isPending) {
+  if (isPending && !isSubscriptionRoute) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface-primary p-6">
         <div className="max-w-md w-full bg-surface-secondary border border-white/[0.06] rounded-3xl p-8 text-center space-y-6 shadow-2xl">
@@ -29,14 +32,22 @@ export default function AdminLayout() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-white mb-2">Application Under Review</h1>
-            <p className="text-dark-200 text-sm leading-relaxed">
-              Your salon application is currently being reviewed by our super admins. We will notify you once it has been approved. 
+            <p className="text-dark-200 text-sm leading-relaxed mb-6">
+              Your salon application is currently being reviewed for our free tier. We will notify you once it has been approved. 
             </p>
+            <div className="bg-white/[0.02] border border-brand-500/20 rounded-xl p-4 text-left">
+              <h3 className="text-white font-medium mb-1">Want instant access?</h3>
+              <p className="text-dark-300 text-xs mb-4">Skip the manual review and unlock your dashboard immediately by purchasing a subscription.</p>
+              <Button variant="primary" onClick={() => navigate('/admin/subscription')} className="w-full bg-brand-500 hover:bg-brand-600 text-white">
+                <CreditCard className="w-4 h-4 mr-2" />
+                View Subscription Plans
+              </Button>
+            </div>
           </div>
           <div className="pt-4 border-t border-white/[0.06]">
             <Button variant="secondary" onClick={signOut} className="w-full">
               <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
+              Wait & Sign Out
             </Button>
           </div>
         </div>
