@@ -1273,3 +1273,7 @@ CREATE TABLE IF NOT EXISTS public.super_admin_audit_logs (
 );
 
 ALTER TABLE public.super_admin_audit_logs ENABLE ROW LEVEL SECURITY;
+
+-- Grants for newly added tables
+GRANT ALL ON TABLE public.free_setups TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.super_admin_audit_logs TO anon, authenticated, service_role;
