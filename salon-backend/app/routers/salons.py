@@ -96,7 +96,7 @@ async def get_live_queue(salon_id: UUID):
 
 
 @router.get("/{salon_id}/queue/admin")
-def get_admin_live_queue(
+async def get_admin_live_queue(
     salon_id: str,
     user: dict = Depends(get_current_user_with_profile),
 ):
@@ -114,7 +114,8 @@ def get_admin_live_queue(
     ist_tz = timezone(timedelta(hours=5, minutes=30))
     today = datetime.now(ist_tz).strftime("%Y-%m-%d")
 
-    res = supabase_admin.table("tokens").select(
+    async_supabase_admin = await get_async_supabase_admin()
+    res = await async_supabase_admin.table("tokens").select(
         "id, token_number, status, service_id, worker_id, "
         "services(name, duration_minutes), workers(name, photo_url), "
         "profiles!customer_id(full_name), guest_name, guest_phone, is_booking, scheduled_for"
@@ -123,9 +124,10 @@ def get_admin_live_queue(
 
 
 @router.get("/{salon_id}/stats")
-def get_salon_stats(salon_id: UUID):
+async def get_salon_stats(salon_id: UUID):
     # Call the RPC function to compute basic live stats
-    res = supabase_admin.rpc("get_salon_stats", {"p_salon_id": str(salon_id)}).execute()
+    async_supabase_admin = await get_async_supabase_admin()
+    res = await async_supabase_admin.rpc("get_salon_stats", {"p_salon_id": str(salon_id)}).execute()
 
     data = res.data if res.data else {
         "waiting": 0, "serving": 0,
@@ -136,8 +138,8 @@ def get_salon_stats(salon_id: UUID):
     # Today's revenue: sum service prices of completed tokens today
     from datetime import date as _date
     today = str(_date.today())
-    rev_res = (
-        supabase_admin.table("tokens")
+    rev_res = await (
+        async_supabase_admin.table("tokens")
         .select("services(price)")
         .eq("salon_id", str(salon_id))
         .eq("status", "completed")
@@ -158,7 +160,7 @@ def get_salon_stats(salon_id: UUID):
 
 
 @router.get("/mine")
-def get_my_salon(user: dict = Depends(get_current_user_with_profile)):
+async def get_my_salon(user: dict = Depends(get_current_user_with_profile)):
     """Returns the authenticated owner or worker's assigned salon.
     NOTE: This route MUST remain before /{salon_id} so FastAPI matches it first.
     """
@@ -166,7 +168,8 @@ def get_my_salon(user: dict = Depends(get_current_user_with_profile)):
     if user.get("db_role") not in ("salon_owner", "worker") or not db_salon_id:
         raise HTTPException(status_code=404, detail="No salon is linked to this account")
 
-    res = supabase_admin.table("salons").select("*").eq("id", db_salon_id).execute()
+    async_supabase_admin = await get_async_supabase_admin()
+    res = await async_supabase_admin.table("salons").select("*").eq("id", db_salon_id).execute()
 
     if not res.data:
         raise HTTPException(status_code=404, detail="No salon found for this account. Please register a salon first.")
@@ -174,7 +177,7 @@ def get_my_salon(user: dict = Depends(get_current_user_with_profile)):
 
 
 @router.get("/{salon_id}")
-def get_salon_by_id(salon_id: UUID, credentials: HTTPAuthorizationCredentials = Depends(optional_bearer)):
+async def get_salon_by_id(salon_id: UUID, credentials: HTTPAuthorizationCredentials = Depends(optional_bearer)):
     """Returns salon details.
     - Public / anonymous callers: only active salons are returned.
     - Authenticated salon owners (of THIS salon) and super admins: any status is returned.
@@ -196,11 +199,12 @@ def get_salon_by_id(salon_id: UUID, credentials: HTTPAuthorizationCredentials = 
     )
     is_super_admin = caller_role == "super_admin"
 
-    query = supabase_admin.table("salons").select("*, profiles!owner_id(full_name)").eq("id", salon_id)
+    async_supabase_admin = await get_async_supabase_admin()
+    query = async_supabase_admin.table("salons").select("*, profiles!owner_id(full_name)").eq("id", salon_id)
     if not (is_owner_of_this_salon or is_super_admin):
         query = query.eq("status", "active")
 
-    res = query.execute()
+    res = await query.execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Salon not found or not yet active.")
     return res.data[0]
