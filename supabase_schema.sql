@@ -1246,4 +1246,30 @@ C R E A T E   T A B L E   I F   N O T   E X I S T S   p u b l i c . p u s h _ s 
  c a n  
  v i e w  
  r e w a r d s \   O N   p u b l i c . l o y a l t y _ r e w a r d s   F O R   S E L E C T   U S I N G   (   a u t h . u i d ( )   I N   ( S E L E C T   o w n e r _ i d   F R O M   p u b l i c . s a l o n s )   O R   a u t h . u i d ( )   I N   ( S E L E C T   u s e r _ i d   F R O M   p u b l i c . w o r k e r s )   ) ;  
- 
+ -- Missing tables required for QueueCut Super Admin features
+
+-- 1. Free Setups Table
+CREATE TABLE IF NOT EXISTS public.free_setups (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email TEXT UNIQUE NOT NULL,
+    granted_by UUID REFERENCES auth.users(id),
+    salon_id UUID REFERENCES public.salons(id),
+    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'used')),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    used_at TIMESTAMPTZ
+);
+
+ALTER TABLE public.free_setups ENABLE ROW LEVEL SECURITY;
+
+-- 2. Super Admin Audit Logs Table
+CREATE TABLE IF NOT EXISTS public.super_admin_audit_logs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    actor_id UUID REFERENCES auth.users(id),
+    action TEXT NOT NULL,
+    target_id TEXT,
+    target_type TEXT,
+    metadata JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.super_admin_audit_logs ENABLE ROW LEVEL SECURITY;

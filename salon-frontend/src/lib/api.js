@@ -25,7 +25,7 @@ api.interceptors.request.use(async (config) => {
       window.dispatchEvent(new CustomEvent('api-cold-start'));
     }
     config.hasTriggeredColdStart = true;
-  }, 3000);
+  }, 5000);
   
   return config
 })

@@ -42,8 +42,15 @@ app.include_router(webhooks.router)
 
 from .database import supabase_admin
 
+from fastapi import Response
+
 @app.get("/health")
-def health_check():
+def health_check(response: Response):
+    # Prevent CDNs (like Cloudflare used by Render) from caching this response
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    
     # Ping the database to keep Supabase from pausing due to inactivity
     try:
         supabase_admin.table("salons").select("id").limit(1).execute()

@@ -14,14 +14,16 @@ export function ToastProvider({ children }) {
   const addToast = useCallback(({ type = 'info', title, message, duration = 4000 }) => {
     const id = ++toastId
     setToasts((prev) => [...prev, { id, type, title, message }])
-    setTimeout(() => removeToast(id), duration)
+    if (duration > 0) {
+      setTimeout(() => removeToast(id), duration)
+    }
     return id
   }, [removeToast])
 
-  const success = (message, title = 'Success') => addToast({ type: 'success', title, message })
-  const error   = (message, title = 'Error')   => addToast({ type: 'error',   title, message })
-  const info    = (message, title = 'Info')    => addToast({ type: 'info',    title, message })
-  const warning = (message, title = 'Warning') => addToast({ type: 'warning', title, message })
+  const success = useCallback((message, title = 'Success', opts = {}) => addToast({ type: 'success', title, message, ...opts }), [addToast])
+  const error   = useCallback((message, title = 'Error', opts = {})   => addToast({ type: 'error',   title, message, ...opts }), [addToast])
+  const info    = useCallback((message, title = 'Info', opts = {})    => addToast({ type: 'info',    title, message, ...opts }), [addToast])
+  const warning = useCallback((message, title = 'Warning', opts = {}) => addToast({ type: 'warning', title, message, ...opts }), [addToast])
 
   return (
     <ToastContext.Provider value={{ success, error, info, warning, addToast, removeToast }}>

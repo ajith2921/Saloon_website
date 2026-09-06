@@ -1,4 +1,4 @@
-import { lazy as reactLazy, Suspense, useEffect } from 'react'
+import { lazy as reactLazy, Suspense, useEffect, useRef } from 'react'
 
 const lazy = (componentImport) =>
   reactLazy(async () => {
@@ -91,21 +91,20 @@ function PageLoader() {
 }
 
 function ColdStartListener() {
-  const { info, dismiss } = useToast()
+  const { info, removeToast } = useToast()
+  const toastIdRef = useRef(null)
   
   useEffect(() => {
-    let toastId = null;
-    
     const onColdStart = () => {
-      if (!toastId) {
-        toastId = info('Waking up the server... This might take a few seconds.', 'Connecting', { autoClose: false });
+      if (!toastIdRef.current) {
+        toastIdRef.current = info('Waking up the server... This might take a few seconds.', 'Connecting', { duration: 0 });
       }
     };
     
     const onResolved = () => {
-      if (toastId) {
-        dismiss(toastId);
-        toastId = null;
+      if (toastIdRef.current) {
+        removeToast(toastIdRef.current);
+        toastIdRef.current = null;
       }
     };
 
@@ -116,7 +115,7 @@ function ColdStartListener() {
       window.removeEventListener('api-cold-start', onColdStart);
       window.removeEventListener('api-cold-start-resolved', onResolved);
     };
-  }, [info, dismiss]);
+  }, [info, removeToast]);
   
   return null;
 }
