@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 from typing import Optional
-from supabase import create_client, Client
+from supabase import create_client, Client, AsyncClient, create_async_client
 from .config import settings
 
 # Lazy-initialised admin client — created on first access to avoid failing
 # at import time when running tests with dummy/missing env vars.
 _supabase_admin: Optional[Client] = None
-
+_async_supabase_admin: Optional[AsyncClient] = None
 
 def get_supabase_admin() -> Client:
     global _supabase_admin
@@ -18,6 +18,14 @@ def get_supabase_admin() -> Client:
         )
     return _supabase_admin
 
+async def get_async_supabase_admin() -> AsyncClient:
+    global _async_supabase_admin
+    if _async_supabase_admin is None:
+        _async_supabase_admin = await create_async_client(
+            settings.supabase_url,
+            settings.supabase_service_role_key,
+        )
+    return _async_supabase_admin
 
 # Backward-compatible proxy so existing code using `supabase_admin.table(...)` keeps working.
 class _LazyClient:

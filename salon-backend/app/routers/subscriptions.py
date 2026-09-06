@@ -1,15 +1,16 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
-from ..database import supabase_admin
+from ..database import supabase_admin, get_async_supabase_admin
 from ..dependencies import get_current_user_with_profile, require_role
 from ..schemas.schemas import SubscriptionPlan, SalonSubscription, SubscriptionEntitlements
 
 router = APIRouter(prefix="/api/subscriptions", tags=["Subscriptions"])
 
 @router.get("/plans", response_model=List[SubscriptionPlan])
-def get_active_plans():
+async def get_active_plans():
     """Retrieve all active subscription plans sorted by sort_order."""
-    res = supabase_admin.table("subscription_plans") \
+    async_supabase_admin = await get_async_supabase_admin()
+    res = await async_supabase_admin.table("subscription_plans") \
         .select("*") \
         .eq("is_active", True) \
         .order("sort_order") \
@@ -17,7 +18,7 @@ def get_active_plans():
     return res.data
 
 @router.get("/me", response_model=SalonSubscription)
-def get_my_subscription(
+async def get_my_subscription(
     user: dict = Depends(require_role('salon_owner'))
 ):
     """Retrieve the subscription for the authenticated user's salon."""
@@ -25,7 +26,8 @@ def get_my_subscription(
     if not salon_id:
         raise HTTPException(status_code=403, detail="Salon ID not found for owner")
     
-    res = supabase_admin.table("subscriptions") \
+    async_supabase_admin = await get_async_supabase_admin()
+    res = await async_supabase_admin.table("subscriptions") \
         .select("*") \
         .eq("salon_id", salon_id) \
         .in_("status", ["trialing", "active", "past_due", "cancelled"]) \
@@ -39,7 +41,7 @@ def get_my_subscription(
     return res.data[0]
 
 @router.get("/entitlements", response_model=SubscriptionEntitlements)
-def get_my_entitlements(
+async def get_my_entitlements(
     user: dict = Depends(require_role('salon_owner'))
 ):
     """Retrieve the limits and entitlements for the authenticated user's salon."""
@@ -47,8 +49,9 @@ def get_my_entitlements(
     if not salon_id:
         raise HTTPException(status_code=403, detail="Salon ID not found for owner")
     
+    async_supabase_admin = await get_async_supabase_admin()
     # We join subscriptions and subscription_plans
-    res = supabase_admin.table("subscriptions") \
+    res = await async_supabase_admin.table("subscriptions") \
         .select("status, plan:subscription_plans(name, max_workers, max_services, max_monthly_tokens, max_advertisements)") \
         .eq("salon_id", salon_id) \
         .in_("status", ["trialing", "active", "past_due"]) \
@@ -72,11 +75,12 @@ def get_my_entitlements(
     }
 
 @router.get("/all", response_model=List[SalonSubscription])
-def get_all_subscriptions(
+async def get_all_subscriptions(
     user: dict = Depends(require_role('super_admin'))
 ):
     """Super Admin ONLY: Retrieve all subscriptions."""
-    res = supabase_admin.table("subscriptions") \
+    async_supabase_admin = await get_async_supabase_admin()
+    res = await async_supabase_admin.table("subscriptions") \
         .select("*") \
         .order("created_at", desc=True) \
         .execute()

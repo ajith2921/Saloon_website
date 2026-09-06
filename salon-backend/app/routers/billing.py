@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from app.dependencies import get_current_user_with_profile, require_role
-from app.database import supabase_admin
+from app.database import supabase_admin, get_async_supabase_admin
 from app.schemas.schemas import BillingCheckoutRequest, BillingCheckoutResponse
 from app.config import settings
 import razorpay
@@ -21,7 +21,7 @@ def get_razorpay_client():
 
 @router.post("/checkout", response_model=BillingCheckoutResponse)
 @limiter.limit("20/minute")
-def create_checkout(
+async def create_checkout(
     request: Request,
     payload: BillingCheckoutRequest,
     user: dict = Depends(require_role("salon_owner"))
@@ -30,13 +30,14 @@ def create_checkout(
     if not salon_id:
         raise HTTPException(status_code=403, detail="Salon ownership required.")
 
+    async_supabase_admin = await get_async_supabase_admin()
     # 1. Prevent duplicate active subscriptions
-    existing_sub = supabase_admin.table("subscriptions").select("id, status").eq("salon_id", salon_id).in_("status", ["trialing", "active", "past_due"]).execute()
+    existing_sub = await async_supabase_admin.table("subscriptions").select("id, status").eq("salon_id", salon_id).in_("status", ["trialing", "active", "past_due"]).execute()
     if existing_sub.data:
         raise HTTPException(status_code=400, detail="Salon already has an active subscription.")
 
     # 2. Retrieve authoritative plan
-    plan_resp = supabase_admin.table("subscription_plans").select("*").eq("id", str(payload.plan_id)).execute()
+    plan_resp = await async_supabase_admin.table("subscription_plans").select("*").eq("id", str(payload.plan_id)).execute()
     if not plan_resp.data:
         raise HTTPException(status_code=404, detail="Plan not found.")
     
@@ -57,7 +58,7 @@ def create_checkout(
         )
 
     # 4. Billing customer lookup (reserved for future customer-level tracking)
-    supabase_admin.table("billing_customers").select("id").eq("salon_id", salon_id).execute()
+    await async_supabase_admin.table("billing_customers").select("id").eq("salon_id", salon_id).execute()
     
     client = get_razorpay_client()
     try:
@@ -80,7 +81,7 @@ def create_checkout(
             "status": "trialing",
             "provider_subscription_id": rzp_sub["id"]
         }
-        supabase_admin.table("subscriptions").insert(new_sub).execute()
+        await async_supabase_admin.table("subscriptions").insert(new_sub).execute()
         
         return BillingCheckoutResponse(
             provider_order_id=rzp_sub["id"],

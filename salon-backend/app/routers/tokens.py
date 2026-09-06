@@ -7,7 +7,7 @@ from ..schemas.schemas import TokenCreate, TokenReassign
 # pyrefly: ignore [missing-import]
 from ..dependencies import get_current_user, get_current_user_with_profile, require_salon_access
 # pyrefly: ignore [missing-import]
-from ..database import supabase_admin
+from ..database import supabase_admin, get_async_supabase_admin
 from ..limiter import limiter
 from ..services.sms import send_sms_notification
 from ..services.push import send_push_notification
@@ -17,7 +17,7 @@ router = APIRouter(prefix="/api/tokens", tags=["Tokens"])
 
 @router.post("")
 @limiter.limit("3/minute")
-def create_token(request: Request, token: TokenCreate, user: dict = Depends(get_current_user_with_profile)):
+async def create_token(request: Request, token: TokenCreate, user: dict = Depends(get_current_user_with_profile)):
     user_id = user.get("sub")
     if not user_id:
         raise HTTPException(status_code=401, detail="User ID not found in token")
@@ -41,7 +41,8 @@ def create_token(request: Request, token: TokenCreate, user: dict = Depends(get_
         raise HTTPException(status_code=403, detail="Insufficient permissions to create tokens")
 
     try:
-        res = supabase_admin.rpc("create_queue_token", {
+        async_supabase_admin = await get_async_supabase_admin()
+        res = await async_supabase_admin.rpc("create_queue_token", {
             "p_salon_id": str(token.salon_id),
             "p_customer_id": customer_id,
             "p_service_id": str(token.service_id),
@@ -81,12 +82,13 @@ def create_token(request: Request, token: TokenCreate, user: dict = Depends(get_
 
 
 @router.get("/my")
-def get_my_active_token(user: dict = Depends(get_current_user)):
+async def get_my_active_token(user: dict = Depends(get_current_user)):
     """Returns the user's active token for today (waiting, called, OR serving)."""
     user_id = user.get("sub")
     today = str(date.today())
 
-    res = supabase_admin.table("tokens").select(
+    async_supabase_admin = await get_async_supabase_admin()
+    res = await async_supabase_admin.table("tokens").select(
         "*, salons(name, cover_image_url), services(name, price, duration_minutes), workers(name, photo_url)"
     ).eq("customer_id", user_id).eq("date", today).in_(
         "status", ["waiting", "called", "serving", "scheduled"]  # include ALL active statuses
@@ -99,7 +101,7 @@ def get_my_active_token(user: dict = Depends(get_current_user)):
 
 
 @router.get("/history")
-def get_token_history(user: dict = Depends(get_current_user)):
+async def get_token_history(user: dict = Depends(get_current_user)):
     """
     Returns the customer's last 50 tokens.
     Response envelope: {"tokens": [...]}
@@ -107,15 +109,17 @@ def get_token_history(user: dict = Depends(get_current_user)):
     frontend can determine whether to show the "Rate" button.
     """
     user_id = user.get("sub")
-    res = supabase_admin.table("tokens").select(
+    async_supabase_admin = await get_async_supabase_admin()
+    res = await async_supabase_admin.table("tokens").select(
         "*, salons(name), services(name, price), workers(name), ratings(id)"
     ).eq("customer_id", user_id).order("created_at", desc=True).limit(50).execute()
     return {"tokens": res.data}
 
 
 @router.get("/{token_id}")
-def get_single_token(token_id: UUID, user: dict = Depends(get_current_user_with_profile)):
-    res = supabase_admin.table("tokens").select(
+async def get_single_token(token_id: UUID, user: dict = Depends(get_current_user_with_profile)):
+    async_supabase_admin = await get_async_supabase_admin()
+    res = await async_supabase_admin.table("tokens").select(
         "*, salons(name, address), workers(name, photo_url), services(name, price, duration_minutes)"
     ).eq("id", token_id).execute()
     if not res.data:
@@ -134,7 +138,7 @@ def get_single_token(token_id: UUID, user: dict = Depends(get_current_user_with_
 
 @router.put("/{token_id}/{action}")
 @limiter.limit("30/minute")
-def update_token_status(request: Request, token_id: UUID, action: str, background_tasks: BackgroundTasks, user: dict = Depends(get_current_user_with_profile)):
+async def update_token_status(request: Request, token_id: UUID, action: str, background_tasks: BackgroundTasks, user: dict = Depends(get_current_user_with_profile)):
     valid_actions = {
         "call":     "called",
         "start":    "serving",
@@ -153,7 +157,8 @@ def update_token_status(request: Request, token_id: UUID, action: str, backgroun
     db_salon_id = user.get("db_salon_id")
 
     # Fetch the token
-    token_res = supabase_admin.table("tokens").select("customer_id, salon_id, status, guest_name, guest_phone, salons(name)").eq("id", token_id).execute()
+    async_supabase_admin = await get_async_supabase_admin()
+    token_res = await async_supabase_admin.table("tokens").select("customer_id, salon_id, status, guest_name, guest_phone, salons(name)").eq("id", token_id).execute()
     if not token_res.data:
         raise HTTPException(status_code=404, detail="Token not found")
 
@@ -208,7 +213,7 @@ def update_token_status(request: Request, token_id: UUID, action: str, backgroun
     if timestamp_field:
         update_payload[timestamp_field] = datetime.now(timezone.utc).isoformat()
 
-    res = supabase_admin.table("tokens").update(update_payload).eq("id", token_id).execute()
+    res = await async_supabase_admin.table("tokens").update(update_payload).eq("id", token_id).execute()
     if not res.data:
         raise HTTPException(status_code=500, detail="Failed to update token status")
 
@@ -223,7 +228,7 @@ def update_token_status(request: Request, token_id: UUID, action: str, backgroun
         
         # If it's a registered customer and we don't have guest_phone, fetch from profiles
         if not phone_number and t.get("customer_id"):
-            profile_res = supabase_admin.table("profiles").select("phone, full_name").eq("id", t["customer_id"]).execute()
+            profile_res = await async_supabase_admin.table("profiles").select("phone, full_name").eq("id", t["customer_id"]).execute()
             if profile_res.data:
                 phone_number = profile_res.data[0].get("phone")
                 first_name = profile_res.data[0].get("full_name", "Customer").split(" ")[0]
@@ -242,14 +247,15 @@ def update_token_status(request: Request, token_id: UUID, action: str, backgroun
 
 @router.put("/{token_id}/reassign")
 @limiter.limit("20/minute")
-def reassign_token(request: Request, token_id: UUID, payload: TokenReassign, user: dict = Depends(get_current_user_with_profile)):
+async def reassign_token(request: Request, token_id: UUID, payload: TokenReassign, user: dict = Depends(get_current_user_with_profile)):
     db_role = user.get("db_role")
     
     if db_role not in ("salon_owner", "worker"):
         raise HTTPException(status_code=403, detail="Only salon staff can reassign tokens")
 
     # Fetch token
-    token_res = supabase_admin.table("tokens").select("salon_id, status").eq("id", token_id).execute()
+    async_supabase_admin = await get_async_supabase_admin()
+    token_res = await async_supabase_admin.table("tokens").select("salon_id, status").eq("id", token_id).execute()
     if not token_res.data:
         raise HTTPException(status_code=404, detail="Token not found")
         
@@ -264,11 +270,11 @@ def reassign_token(request: Request, token_id: UUID, payload: TokenReassign, use
         
     # Verify the new worker belongs to the same salon
     if payload.worker_id is not None:
-        worker_res = supabase_admin.table("workers").select("id").eq("id", payload.worker_id).eq("salon_id", t["salon_id"]).eq("status", "active").execute()
+        worker_res = await async_supabase_admin.table("workers").select("id").eq("id", payload.worker_id).eq("salon_id", t["salon_id"]).eq("status", "active").execute()
         if not worker_res.data:
             raise HTTPException(status_code=400, detail="Worker not found or not active at this salon")
             
-    res = supabase_admin.table("tokens").update({"worker_id": str(payload.worker_id) if payload.worker_id else None}).eq("id", token_id).execute()
+    res = await async_supabase_admin.table("tokens").update({"worker_id": str(payload.worker_id) if payload.worker_id else None}).eq("id", token_id).execute()
     
     if not res.data:
         raise HTTPException(status_code=500, detail="Failed to reassign token")

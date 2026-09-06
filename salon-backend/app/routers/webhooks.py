@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Request, HTTPException, Depends
-from app.database import supabase_admin
+from app.database import supabase_admin, get_async_supabase_admin
 from app.config import settings
 import razorpay
 import logging
@@ -64,8 +64,9 @@ async def razorpay_webhook(request: Request):
             # Not a subscription event we care about
             return {"status": "ok"}
 
+        async_supabase_admin = await get_async_supabase_admin()
         # Look up internal subscription by provider_subscription_id
-        db_sub_resp = supabase_admin.table("subscriptions").select("id, salon_id").eq("provider_subscription_id", provider_sub_id).execute()
+        db_sub_resp = await async_supabase_admin.table("subscriptions").select("id, salon_id").eq("provider_subscription_id", provider_sub_id).execute()
         if not db_sub_resp.data:
             # We don't know this subscription. Ignore safely.
             return {"status": "ok"}
@@ -87,27 +88,27 @@ async def razorpay_webhook(request: Request):
         }
         
         # If this insert fails, it means we already processed this provider_event_id
-        tx_resp = supabase_admin.table("payment_transactions").insert(tx_data).execute()
+        tx_resp = await async_supabase_admin.table("payment_transactions").insert(tx_data).execute()
 
         # 4. State Machine Transition
         if event_type in ["subscription.charged", "subscription.authenticated", "subscription.activated"]:
             # Payment successful — activate the subscription
-            supabase_admin.table("subscriptions").update({"status": "active"}).eq("id", sub_id).execute()
+            await async_supabase_admin.table("subscriptions").update({"status": "active"}).eq("id", sub_id).execute()
             # Auto-approve the salon
-            supabase_admin.table("salons").update({"status": "active"}).eq("id", salon_id).execute()
+            await async_supabase_admin.table("salons").update({"status": "active"}).eq("id", salon_id).execute()
         elif event_type in ["subscription.halted", "payment.failed"]:
             # Razorpay halts a subscription after max retries, or a payment attempt fails
-            supabase_admin.table("subscriptions").update({"status": "past_due"}).eq("id", sub_id).execute()
+            await async_supabase_admin.table("subscriptions").update({"status": "past_due"}).eq("id", sub_id).execute()
             # Suspend the salon since payment failed/halted
-            supabase_admin.table("salons").update({"status": "suspended"}).eq("id", salon_id).execute()
+            await async_supabase_admin.table("salons").update({"status": "suspended"}).eq("id", salon_id).execute()
         elif event_type == "subscription.cancelled":
-            supabase_admin.table("subscriptions").update({"status": "cancelled"}).eq("id", sub_id).execute()
+            await async_supabase_admin.table("subscriptions").update({"status": "cancelled"}).eq("id", sub_id).execute()
             # Suspend the salon since subscription is cancelled
-            supabase_admin.table("salons").update({"status": "suspended"}).eq("id", salon_id).execute()
+            await async_supabase_admin.table("salons").update({"status": "suspended"}).eq("id", salon_id).execute()
         elif event_type == "subscription.completed":
             # All billing cycles done
-            supabase_admin.table("subscriptions").update({"status": "cancelled"}).eq("id", sub_id).execute()
-            supabase_admin.table("salons").update({"status": "suspended"}).eq("id", salon_id).execute()
+            await async_supabase_admin.table("subscriptions").update({"status": "cancelled"}).eq("id", sub_id).execute()
+            await async_supabase_admin.table("salons").update({"status": "suspended"}).eq("id", salon_id).execute()
 
     except Exception as e:
         # Check if it was an idempotency conflict

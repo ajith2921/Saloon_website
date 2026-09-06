@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from ..limiter import limiter
 
 from ..dependencies import get_current_user
-from ..database import supabase_admin
+from ..database import supabase_admin, get_async_supabase_admin
 from ..schemas.schemas import RatingCreate
 
 router = APIRouter(prefix="/api/ratings", tags=["Ratings"])
@@ -11,12 +11,13 @@ router = APIRouter(prefix="/api/ratings", tags=["Ratings"])
 
 @router.post("")
 @limiter.limit("5/minute")
-def submit_rating(request: Request, rating: RatingCreate, user: dict = Depends(get_current_user)):
+async def submit_rating(request: Request, rating: RatingCreate, user: dict = Depends(get_current_user)):
     user_id = user.get("sub")
     if not user_id:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    token_res = supabase_admin.table("tokens").select(
+    async_supabase_admin = await get_async_supabase_admin()
+    token_res = await async_supabase_admin.table("tokens").select(
         "status, customer_id, salon_id, worker_id"
     ).eq("id", str(rating.token_id)).execute()
 
@@ -39,7 +40,7 @@ def submit_rating(request: Request, rating: RatingCreate, user: dict = Depends(g
     if not worker_id:
         raise HTTPException(status_code=400, detail="Token has no associated worker to rate")
 
-    existing_res = supabase_admin.table("ratings").select("id").eq(
+    existing_res = await async_supabase_admin.table("ratings").select("id").eq(
         "token_id", str(rating.token_id)
     ).execute()
     if existing_res.data:
@@ -55,7 +56,7 @@ def submit_rating(request: Request, rating: RatingCreate, user: dict = Depends(g
     }
 
     try:
-        res = supabase_admin.table("ratings").insert(new_rating).execute()
+        res = await async_supabase_admin.table("ratings").insert(new_rating).execute()
         if not res.data:
             raise HTTPException(status_code=500, detail="Failed to submit rating")
         return res.data[0]
@@ -66,19 +67,21 @@ def submit_rating(request: Request, rating: RatingCreate, user: dict = Depends(g
 
 
 @router.get("")
-def get_ratings(salon_id: UUID = None):
-    query = supabase_admin.table("ratings").select(
+async def get_ratings(salon_id: UUID = None):
+    async_supabase_admin = await get_async_supabase_admin()
+    query = async_supabase_admin.table("ratings").select(
         "*, profiles(full_name, avatar_url), workers(name)"
     ).order("created_at", desc=True).limit(50)
     if salon_id:
         query = query.eq("salon_id", str(salon_id))
-    res = query.execute()
+    res = await query.execute()
     return {"ratings": res.data or []}
 
 
 @router.get("/salon/{salon_id}")
-def get_salon_ratings(salon_id: UUID):
-    res = supabase_admin.table("ratings").select(
+async def get_salon_ratings(salon_id: UUID):
+    async_supabase_admin = await get_async_supabase_admin()
+    res = await async_supabase_admin.table("ratings").select(
         "*, profiles(full_name, avatar_url), workers(name)"
     ).eq("salon_id", str(salon_id)).order("created_at", desc=True).limit(50).execute()
     return {"ratings": res.data or []}

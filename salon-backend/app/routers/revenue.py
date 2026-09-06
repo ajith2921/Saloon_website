@@ -3,14 +3,14 @@ from fastapi import APIRouter, Depends
 from datetime import date, timedelta
 
 from ..dependencies import get_current_user_with_profile, require_salon_access
-from ..database import supabase_admin
+from ..database import supabase_admin, get_async_supabase_admin
 from ..config import settings
 
 router = APIRouter(prefix="/api/revenue", tags=["Revenue"])
 
 
 @router.get("/salon/{salon_id}")
-def get_revenue(salon_id: UUID, user: dict = Depends(get_current_user_with_profile)):
+async def get_revenue(salon_id: UUID, user: dict = Depends(get_current_user_with_profile)):
     """
     Revenue is derived from completed tokens × service price.
     Platform fee is deducted per token (configurable in settings).
@@ -21,7 +21,8 @@ def get_revenue(salon_id: UUID, user: dict = Depends(get_current_user_with_profi
     month_start = today.replace(day=1)
 
     # Fetch all completed tokens with their service prices
-    completed_res = supabase_admin.table("tokens") \
+    async_supabase_admin = await get_async_supabase_admin()
+    completed_res = await async_supabase_admin.table("tokens") \
         .select("id, date, created_at, services(name, price)") \
         .eq("salon_id", salon_id) \
         .eq("status", "completed") \

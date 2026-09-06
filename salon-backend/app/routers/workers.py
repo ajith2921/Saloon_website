@@ -1,7 +1,7 @@
 from uuid import UUID
 from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from typing import Optional
-from ..database import supabase_admin
+from ..database import supabase_admin, get_async_supabase_admin
 from ..dependencies import require_role, require_salon_access
 from ..schemas.schemas import WorkerCreate, WorkerUpdate, WorkerProvisionAccount
 from ..limiter import limiter
@@ -16,7 +16,7 @@ _PUBLIC_FIELDS = "id, salon_id, name, photo_url, specialization, experience_year
 # ── Public reads (no auth) ──────────────────────────────────────────────────
 
 @router.get("/me")
-def get_my_worker_profile(user: dict = Depends(require_role("worker"))):
+async def get_my_worker_profile(user: dict = Depends(require_role("worker"))):
     """
     Get the currently authenticated worker's worker profile.
     Uses the db_worker_id cached in the dependencies resolver.
@@ -25,8 +25,9 @@ def get_my_worker_profile(user: dict = Depends(require_role("worker"))):
     if not worker_id:
         raise HTTPException(status_code=404, detail="Worker record not found")
         
-    res = (
-        supabase_admin.table("workers")
+    async_supabase_admin = await get_async_supabase_admin()
+    res = await (
+        async_supabase_admin.table("workers")
         .select("*")
         .eq("id", worker_id)
         .execute()
@@ -37,7 +38,7 @@ def get_my_worker_profile(user: dict = Depends(require_role("worker"))):
 
 
 @router.get("")
-def get_workers(salon_id: UUID = Query(..., description="Filter workers by salon"), request: Request = None):
+async def get_workers(salon_id: UUID = Query(..., description="Filter workers by salon"), request: Request = None):
     """
     List workers for a specific salon.
     Returns public-safe fields by default. 
@@ -45,12 +46,14 @@ def get_workers(salon_id: UUID = Query(..., description="Filter workers by salon
     """
     fields = _PUBLIC_FIELDS
     
+    async_supabase_admin = await get_async_supabase_admin()
+    
     # Try to identify if caller is the owner
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
         token = auth_header.split(" ")[1]
         try:
-            user_response = supabase_admin.auth.get_user(token)
+            user_response = await async_supabase_admin.auth.get_user(token)
             if user_response and user_response.user:
                 # If they are an owner, we can safely expose user_id
                 user_id = user_response.user.id
@@ -58,14 +61,14 @@ def get_workers(salon_id: UUID = Query(..., description="Filter workers by salon
                 # Alternatively just use the resolved role from profiles if needed, 
                 # but to avoid extra DB calls, if they just have a valid token, we'll check later
                 # Actually, simplest is to just fetch user_id and let the client hide/show based on if it's populated.
-                res = supabase_admin.table("profiles").select("role").eq("id", user_id).single().execute()
+                res = await async_supabase_admin.table("profiles").select("role").eq("id", user_id).single().execute()
                 if res.data and res.data.get("role") in ["salon_owner", "super_admin"]:
                     fields = _PUBLIC_FIELDS + ", user_id"
         except Exception:
             pass
 
-    res = (
-        supabase_admin.table("workers")
+    res = await (
+        async_supabase_admin.table("workers")
         .select(fields)
         .eq("salon_id", salon_id)
         .order("name")
@@ -75,13 +78,14 @@ def get_workers(salon_id: UUID = Query(..., description="Filter workers by salon
 
 
 @router.get("/{worker_id}")
-def get_worker(worker_id: UUID):
+async def get_worker(worker_id: UUID):
     """
     Get a single worker by ID.
     Returns only public-safe fields (no user_id).
     """
-    res = (
-        supabase_admin.table("workers")
+    async_supabase_admin = await get_async_supabase_admin()
+    res = await (
+        async_supabase_admin.table("workers")
         .select(_PUBLIC_FIELDS)
         .eq("id", worker_id)
         .execute()
@@ -95,7 +99,7 @@ def get_worker(worker_id: UUID):
 
 @router.post("")
 @limiter.limit("20/minute")
-def create_worker(
+async def create_worker(
     request: Request,
     worker: WorkerCreate,
     user: dict = Depends(require_role("salon_owner|super_admin")),
@@ -133,14 +137,15 @@ def create_worker(
         "photo_url": worker.photo_url,
     }
 
-    res = supabase_admin.table("workers").insert(new_worker).execute()
+    async_supabase_admin = await get_async_supabase_admin()
+    res = await async_supabase_admin.table("workers").insert(new_worker).execute()
     if not res.data:
         raise HTTPException(status_code=500, detail="Failed to create worker")
     return res.data[0]
 
 
 @router.put("/{worker_id}")
-def update_worker(
+async def update_worker(
     worker_id: str,
     updates: WorkerUpdate,
     user: dict = Depends(require_role("salon_owner|super_admin")),
@@ -150,8 +155,9 @@ def update_worker(
     user_id is stripped from the update payload — re-linking a worker to a
     different auth account is not permitted through this endpoint.
     """
-    existing = (
-        supabase_admin.table("workers")
+    async_supabase_admin = await get_async_supabase_admin()
+    existing = await (
+        async_supabase_admin.table("workers")
         .select("salon_id")
         .eq("id", worker_id)
         .execute()
@@ -170,8 +176,8 @@ def update_worker(
     if not payload:
         raise HTTPException(status_code=400, detail="No fields to update")
 
-    res = (
-        supabase_admin.table("workers")
+    res = await (
+        async_supabase_admin.table("workers")
         .update(payload)
         .eq("id", worker_id)
         .execute()
@@ -182,7 +188,7 @@ def update_worker(
 
 
 @router.post("/{worker_id}/provision")
-def provision_worker_account(
+async def provision_worker_account(
     worker_id: str,
     creds: WorkerProvisionAccount,
     user: dict = Depends(require_role("salon_owner|super_admin")),
@@ -191,8 +197,9 @@ def provision_worker_account(
     Provisions a login account (email/password) for an existing worker profile.
     Automatically assigns the 'worker' role in the profiles table.
     """
-    existing = (
-        supabase_admin.table("workers")
+    async_supabase_admin = await get_async_supabase_admin()
+    existing = await (
+        async_supabase_admin.table("workers")
         .select("salon_id, user_id, name")
         .eq("id", worker_id)
         .execute()
@@ -208,7 +215,7 @@ def provision_worker_account(
 
     # 1. Create the user in Auth
     try:
-        new_user = supabase_admin.auth.admin.create_user({
+        new_user = await async_supabase_admin.auth.admin.create_user({
             "email": creds.email,
             "password": creds.password,
             "email_confirm": True,
@@ -220,11 +227,11 @@ def provision_worker_account(
     user_id = new_user.user.id
 
     # 2. Update role in profiles (handle_new_user trigger creates the profile as 'customer', we upgrade it to 'worker')
-    supabase_admin.table("profiles").update({"role": "worker"}).eq("id", user_id).execute()
+    await async_supabase_admin.table("profiles").update({"role": "worker"}).eq("id", user_id).execute()
 
     # 3. Link the user_id to the worker record
-    res = (
-        supabase_admin.table("workers")
+    res = await (
+        async_supabase_admin.table("workers")
         .update({"user_id": user_id})
         .eq("id", worker_id)
         .execute()
@@ -234,13 +241,14 @@ def provision_worker_account(
 
 
 @router.delete("/{worker_id}")
-def delete_worker(
+async def delete_worker(
     worker_id: str,
     user: dict = Depends(require_role("salon_owner|super_admin")),
 ):
     """Delete (hard delete) a worker. Ownership verified via DB lookup before deletion."""
-    existing = (
-        supabase_admin.table("workers")
+    async_supabase_admin = await get_async_supabase_admin()
+    existing = await (
+        async_supabase_admin.table("workers")
         .select("salon_id")
         .eq("id", worker_id)
         .execute()
@@ -251,9 +259,9 @@ def delete_worker(
     require_salon_access(user, existing.data[0]["salon_id"], {"salon_owner"})
 
     # Check for active tokens
-    active_tokens = supabase_admin.table("tokens").select("id").eq("worker_id", worker_id).in_("status", ["waiting", "called", "serving"]).execute()
+    active_tokens = await async_supabase_admin.table("tokens").select("id").eq("worker_id", worker_id).in_("status", ["waiting", "called", "serving"]).execute()
     if active_tokens.data:
         raise HTTPException(status_code=400, detail="This worker has active queue tokens and cannot be deleted.")
 
-    supabase_admin.table("workers").delete().eq("id", worker_id).execute()
+    await async_supabase_admin.table("workers").delete().eq("id", worker_id).execute()
     return {"success": True, "deleted_id": worker_id}

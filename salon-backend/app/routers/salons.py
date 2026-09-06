@@ -7,7 +7,7 @@ from datetime import date
 import re
 
 from ..limiter import limiter
-from ..database import supabase_admin
+from ..database import supabase_admin, get_async_supabase_admin
 from ..dependencies import get_current_user_with_profile, require_salon_access, get_current_user, evict_profile_cache
 
 # Optional bearer: does NOT raise 403 if Authorization header is absent.
@@ -56,36 +56,40 @@ router = APIRouter(prefix="/api/salons", tags=["Salons"])
 
 @router.get("")
 @limiter.limit("60/minute")
-def get_salons(request: Request, status: Optional[str] = Query(None), limit: Optional[int] = Query(50, le=100), offset: Optional[int] = Query(0)):
+async def get_salons(request: Request, status: Optional[str] = Query(None), limit: Optional[int] = Query(50, le=100), offset: Optional[int] = Query(0)):
     # Public discovery must never expose pending or suspended salons.
-    query = supabase_admin.table("salons").select("*").eq("status", "active")
-    res = query.range(offset, offset + limit - 1).execute()
+    async_supabase_admin = await get_async_supabase_admin()
+    query = async_supabase_admin.table("salons").select("*").eq("status", "active")
+    res = await query.range(offset, offset + limit - 1).execute()
     return res.data
 
 
 @router.get("/{salon_id}/services")
-def get_salon_services(salon_id: UUID):
+async def get_salon_services(salon_id: UUID):
     """Returns services for a salon. Response: { services: [...] }"""
-    res = supabase_admin.table("services").select("id, salon_id, name, description, price, duration_minutes, status").eq("salon_id", salon_id).eq("status", "active").order("name").execute()
+    async_supabase_admin = await get_async_supabase_admin()
+    res = await async_supabase_admin.table("services").select("id, salon_id, name, description, price, duration_minutes, status").eq("salon_id", salon_id).eq("status", "active").order("name").execute()
     return {"services": res.data}
 
 
 @router.get("/{salon_id}/workers")
-def get_salon_workers(salon_id: UUID):
+async def get_salon_workers(salon_id: UUID):
     """Returns workers for a salon. Response: { workers: [...] }"""
-    res = supabase_admin.table("workers").select("id, salon_id, name, photo_url, specialization, experience_years, status").eq("salon_id", salon_id).order("name").execute()
+    async_supabase_admin = await get_async_supabase_admin()
+    res = await async_supabase_admin.table("workers").select("id, salon_id, name, photo_url, specialization, experience_years, status").eq("salon_id", salon_id).order("name").execute()
     return {"workers": res.data}
 
 
 @router.get("/{salon_id}/queue/live")
-def get_live_queue(salon_id: UUID):
+async def get_live_queue(salon_id: UUID):
     """Returns today's token list for the public live queue display.
 
     Deliberately omits customer_id and profile data — public callers (including
     customers viewing queue position) must never receive another customer's identity.
     See /queue/admin for the authenticated owner/worker view with customer names.
     """
-    res = supabase_admin.table("tokens").select(
+    async_supabase_admin = await get_async_supabase_admin()
+    res = await async_supabase_admin.table("tokens").select(
         "id, token_number, status, service_id, worker_id, services(name, duration_minutes), workers(name, photo_url), is_booking, scheduled_for, guest_name"
     ).eq("salon_id", salon_id).in_("status", ["waiting", "called", "serving", "scheduled"]).order("token_number").execute()
     return {"tokens": res.data}

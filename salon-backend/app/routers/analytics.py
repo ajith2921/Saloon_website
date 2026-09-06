@@ -3,17 +3,19 @@ from fastapi import APIRouter, Depends
 from datetime import date, timedelta
 
 from ..dependencies import get_current_user_with_profile, require_salon_access
-from ..database import supabase_admin
+from ..database import supabase_admin, get_async_supabase_admin
 
 router = APIRouter(prefix="/api/analytics", tags=["Analytics"])
 
 
 @router.get("/salon/{salon_id}/summary")
-def get_analytics_summary(salon_id: UUID, user: dict = Depends(get_current_user_with_profile)):
+async def get_analytics_summary(salon_id: UUID, user: dict = Depends(get_current_user_with_profile)):
     require_salon_access(user, salon_id, {"salon_owner"})
 
+    async_supabase_admin = await get_async_supabase_admin()
+
     # Call the original RPC function to compute basic stats
-    res = supabase_admin.rpc("get_analytics_summary", {"p_salon_id": str(salon_id)}).execute()
+    res = await async_supabase_admin.rpc("get_analytics_summary", {"p_salon_id": str(salon_id)}).execute()
     
     data = res.data if res.data else {
         "total_customers_today": 0,
@@ -27,7 +29,7 @@ def get_analytics_summary(salon_id: UUID, user: dict = Depends(get_current_user_
     today = date.today()
     week_start = today - timedelta(days=6)
     
-    tokens_res = supabase_admin.table("tokens") \
+    tokens_res = await async_supabase_admin.table("tokens") \
         .select("id, date, status, services(id, name, price), workers(id, name)") \
         .eq("salon_id", salon_id) \
         .eq("status", "completed") \

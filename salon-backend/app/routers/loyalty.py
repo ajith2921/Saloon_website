@@ -1,19 +1,21 @@
 from fastapi import APIRouter, Depends
 from ..dependencies import get_current_user
-from ..database import supabase_admin
+from ..database import supabase_admin, get_async_supabase_admin
 
 router = APIRouter(prefix="/api/loyalty", tags=["Loyalty"])
 
 @router.get("/balance")
-def get_loyalty_balance(user: dict = Depends(get_current_user)):
+async def get_loyalty_balance(user: dict = Depends(get_current_user)):
     user_id = user.get("sub")
-    res = supabase_admin.table("profiles").select("loyalty_points").eq("id", user_id).execute()
+    async_supabase_admin = await get_async_supabase_admin()
+    res = await async_supabase_admin.table("profiles").select("loyalty_points").eq("id", user_id).execute()
     points = res.data[0]["loyalty_points"] if res.data else 0
     return {"points": points}
 @router.get("/history")
-def get_loyalty_history(user: dict = Depends(get_current_user)):
+async def get_loyalty_history(user: dict = Depends(get_current_user)):
     user_id = user.get("sub")
-    res = supabase_admin.table("tokens") \
+    async_supabase_admin = await get_async_supabase_admin()
+    res = await async_supabase_admin.table("tokens") \
         .select("id, date, status, services(name, price), salons(name)") \
         .eq("customer_id", user_id) \
         .eq("status", "completed") \
@@ -35,7 +37,7 @@ def get_loyalty_history(user: dict = Depends(get_current_user)):
     return {"history": history}
 
 @router.get("/rules")
-def get_loyalty_rules():
+async def get_loyalty_rules():
     return {
         "earning_rules": "Earn 1 point for every ₹10 spent on completed services. Minimum 1 point per visit.",
         "rewards": [

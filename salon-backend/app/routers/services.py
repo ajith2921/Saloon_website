@@ -1,7 +1,7 @@
 from uuid import UUID
 from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from typing import Optional
-from ..database import supabase_admin
+from ..database import supabase_admin, get_async_supabase_admin
 from ..dependencies import require_role, require_salon_access, get_current_user_with_profile
 from ..schemas.schemas import ServiceCreate, ServiceUpdate
 from ..limiter import limiter
@@ -15,14 +15,15 @@ _PUBLIC_FIELDS = "id, salon_id, name, description, price, duration_minutes, stat
 # ── Public reads (no auth) ──────────────────────────────────────────────────
 
 @router.get("")
-def get_services(salon_id: UUID = Query(..., description="Filter services by salon")):
+async def get_services(salon_id: UUID = Query(..., description="Filter services by salon")):
     """
     List services for a specific salon.
     Requires salon_id — callers cannot enumerate cross-tenant data.
     Returns only public-safe fields (no created_at, no internal metadata).
     """
-    res = (
-        supabase_admin.table("services")
+    async_supabase_admin = await get_async_supabase_admin()
+    res = await (
+        async_supabase_admin.table("services")
         .select(_PUBLIC_FIELDS)
         .eq("salon_id", salon_id)
         .eq("status", "active")
@@ -33,9 +34,10 @@ def get_services(salon_id: UUID = Query(..., description="Filter services by sal
 
 
 @router.get("/{service_id}")
-def get_service(service_id: UUID):
-    res = (
-        supabase_admin.table("services")
+async def get_service(service_id: UUID):
+    async_supabase_admin = await get_async_supabase_admin()
+    res = await (
+        async_supabase_admin.table("services")
         .select(_PUBLIC_FIELDS)
         .eq("id", service_id)
         .execute()
@@ -49,7 +51,7 @@ def get_service(service_id: UUID):
 
 @router.post("")
 @limiter.limit("20/minute")
-def create_service(
+async def create_service(
     request: Request,
     service: ServiceCreate,
     user: dict = Depends(require_role("salon_owner|super_admin")),
@@ -88,21 +90,23 @@ def create_service(
         "status": service.status,
     }
 
-    res = supabase_admin.table("services").insert(new_service).execute()
+    async_supabase_admin = await get_async_supabase_admin()
+    res = await async_supabase_admin.table("services").insert(new_service).execute()
     if not res.data:
         raise HTTPException(status_code=500, detail="Failed to create service")
     return res.data[0]
 
 
 @router.put("/{service_id}")
-def update_service(
+async def update_service(
     service_id: str,
     updates: ServiceUpdate,
     user: dict = Depends(require_role("salon_owner|super_admin")),
 ):
     """Update an existing service. Ownership verified via DB lookup before update."""
-    existing = (
-        supabase_admin.table("services")
+    async_supabase_admin = await get_async_supabase_admin()
+    existing = await (
+        async_supabase_admin.table("services")
         .select("salon_id")
         .eq("id", service_id)
         .execute()
@@ -116,8 +120,8 @@ def update_service(
     if not payload:
         raise HTTPException(status_code=400, detail="No fields to update")
 
-    res = (
-        supabase_admin.table("services")
+    res = await (
+        async_supabase_admin.table("services")
         .update(payload)
         .eq("id", service_id)
         .execute()
@@ -128,13 +132,14 @@ def update_service(
 
 
 @router.delete("/{service_id}")
-def delete_service(
+async def delete_service(
     service_id: str,
     user: dict = Depends(require_role("salon_owner|super_admin")),
 ):
     """Delete a service. Ownership verified via DB lookup before deletion."""
-    existing = (
-        supabase_admin.table("services")
+    async_supabase_admin = await get_async_supabase_admin()
+    existing = await (
+        async_supabase_admin.table("services")
         .select("salon_id")
         .eq("id", service_id)
         .execute()
@@ -144,5 +149,5 @@ def delete_service(
 
     require_salon_access(user, existing.data[0]["salon_id"], {"salon_owner"})
 
-    supabase_admin.table("services").delete().eq("id", service_id).execute()
+    await async_supabase_admin.table("services").delete().eq("id", service_id).execute()
     return {"success": True, "deleted_id": service_id}

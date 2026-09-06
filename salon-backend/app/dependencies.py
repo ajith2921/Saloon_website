@@ -5,7 +5,7 @@ import time
 import threading
 from typing import Optional, Dict, Any
 from .config import settings
-from .database import supabase_admin
+from .database import supabase_admin, get_async_supabase_admin
 
 # We use HTTPBearer to extract the JWT from the Authorization header.
 security = HTTPBearer()
@@ -51,10 +51,11 @@ def evict_profile_cache(user_id: str) -> None:
             del _profile_cache[user_id]
 
 
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Dict[str, Any]:
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Dict[str, Any]:
     token = credentials.credentials
     try:
-        user_response = supabase_admin.auth.get_user(token)
+        async_supabase_admin = await get_async_supabase_admin()
+        user_response = await async_supabase_admin.auth.get_user(token)
         user = user_response.user
         if not user:
             raise HTTPException(
@@ -79,7 +80,7 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         )
 
 
-def get_current_user_with_profile(user: dict = Depends(get_current_user)) -> Dict[str, Any]:
+async def get_current_user_with_profile(user: dict = Depends(get_current_user)) -> Dict[str, Any]:
     """
     Extends get_current_user by fetching the role from the profiles table.
     This is the source of truth for roles, not JWT user_metadata.
@@ -105,7 +106,8 @@ def get_current_user_with_profile(user: dict = Depends(get_current_user)) -> Dic
         return user
 
     # --- Cache miss: resolve role + salon from DB ---
-    res = supabase_admin.table("profiles").select("role").eq("id", user_id).single().execute()
+    async_supabase_admin = await get_async_supabase_admin()
+    res = await async_supabase_admin.table("profiles").select("role").eq("id", user_id).single().execute()
     if not res.data:
         raise HTTPException(status_code=401, detail="User profile not found")
 
@@ -114,11 +116,11 @@ def get_current_user_with_profile(user: dict = Depends(get_current_user)) -> Dic
     db_worker_id = None
 
     if db_role == "salon_owner":
-        salon_res = supabase_admin.table("salons").select("id").eq("owner_id", user_id).limit(1).execute()
+        salon_res = await async_supabase_admin.table("salons").select("id").eq("owner_id", user_id).limit(1).execute()
         if salon_res.data:
             db_salon_id = salon_res.data[0]["id"]
     elif db_role == "worker":
-        worker_res = supabase_admin.table("workers").select("id, salon_id").eq("user_id", user_id).limit(1).execute()
+        worker_res = await async_supabase_admin.table("workers").select("id, salon_id").eq("user_id", user_id).limit(1).execute()
         if worker_res.data:
             db_salon_id = worker_res.data[0]["salon_id"]
             db_worker_id = worker_res.data[0]["id"]
