@@ -1,5 +1,5 @@
 -- 013_peak_time_analytics.sql
--- Updates get_platform_stats to return peak_times
+-- Fixes and restores the original get_platform_stats while adding peak_times
 
 CREATE OR REPLACE FUNCTION public.get_platform_stats(p_days INT DEFAULT 30)
 RETURNS JSON
@@ -23,51 +23,54 @@ BEGIN
     'pending_approvals', (SELECT count(*) FROM public.salons WHERE status = 'pending'),
     'total_customers', (SELECT count(*) FROM public.profiles WHERE role = 'customer'),
     'total_tokens_today', (SELECT count(*) FROM public.tokens WHERE date = CURRENT_DATE),
-    'platform_revenue_month', (
-      SELECT COALESCE(SUM(sp.price_monthly), 0)
-      FROM public.subscriptions s
-      JOIN public.subscription_plans sp ON s.plan_id = sp.id
-      WHERE s.current_period_end >= CURRENT_DATE
-    )
+    'platform_revenue_month', COALESCE((SELECT sum(amount) FROM public.payment_transactions WHERE status = 'captured' AND created_at >= date_trunc('month', CURRENT_DATE)), 0)
   ) INTO v_totals;
 
-  -- 2. Generate Time Series (Tokens created per day over last N days)
-  WITH date_series AS (
-    SELECT generate_series(v_start_date, CURRENT_DATE, '1 day'::interval)::date AS d
+  -- 2. Get Time Series (Daily revenue & tokens for last p_days)
+  WITH dates AS (
+    SELECT generate_series(v_start_date, CURRENT_DATE, '1 day'::interval)::DATE AS d
   ),
-  daily_counts AS (
-    SELECT 
-      date,
-      count(*) as tokens_count
+  daily_tokens AS (
+    SELECT date, count(*) as tokens
     FROM public.tokens
     WHERE date >= v_start_date
     GROUP BY date
+  ),
+  daily_revenue AS (
+    SELECT created_at::DATE as date, sum(amount) as revenue
+    FROM public.payment_transactions
+    WHERE status = 'captured' AND created_at::DATE >= v_start_date
+    GROUP BY created_at::DATE
   )
-  SELECT json_agg(
+  SELECT COALESCE(json_agg(
     json_build_object(
-      'date', to_char(ds.d, 'Mon DD'),
-      'tokens', COALESCE(dc.tokens_count, 0)
-    ) ORDER BY ds.d
-  ) INTO v_time_series
-  FROM date_series ds
-  LEFT JOIN daily_counts dc ON ds.d = dc.date;
+      'date', to_char(d.d, 'Mon DD'),
+      'tokens', COALESCE(t.tokens, 0),
+      'revenue', COALESCE(r.revenue, 0)
+    ) ORDER BY d.d ASC
+  ), '[]'::json) INTO v_time_series
+  FROM dates d
+  LEFT JOIN daily_tokens t ON d.d = t.date
+  LEFT JOIN daily_revenue r ON d.d = r.date;
 
-  -- 3. Top Salons by Queue Volume
-  WITH salon_counts AS (
-    SELECT salon_id, count(*) as total_queue
-    FROM public.tokens
-    GROUP BY salon_id
-    ORDER BY total_queue DESC
+  -- 3. Get Top Salons (by total tokens ever, plus revenue)
+  WITH salon_stats AS (
+    SELECT 
+      s.id,
+      s.name,
+      s.city,
+      (SELECT count(*) FROM public.tokens WHERE salon_id = s.id) as total_tokens,
+      (SELECT COALESCE(sum(amount), 0) FROM public.payment_transactions WHERE salon_id = s.id AND status = 'captured') as revenue
+    FROM public.salons s
+    WHERE s.status = 'active'
+    ORDER BY total_tokens DESC
     LIMIT 5
   )
-  SELECT json_agg(
+  SELECT COALESCE(json_agg(
     json_build_object(
-      'name', s.name,
-      'queue_volume', sc.total_queue
+      'id', id, 'name', name, 'city', city, 'total_tokens', total_tokens, 'revenue', revenue
     )
-  ) INTO v_top_salons
-  FROM salon_counts sc
-  JOIN public.salons s ON s.id = sc.salon_id;
+  ), '[]'::json) INTO v_top_salons FROM salon_stats;
 
   -- 4. Peak Traffic Hours (Aggregate by Hour of Day)
   WITH hour_counts AS (
@@ -79,19 +82,19 @@ BEGIN
     GROUP BY hour_of_day
     ORDER BY hour_of_day ASC
   )
-  SELECT json_agg(
+  SELECT COALESCE(json_agg(
     json_build_object(
       'hour', hour_of_day,
       'count', tokens_count
     )
-  ) INTO v_peak_times
+  ), '[]'::json) INTO v_peak_times
   FROM hour_counts;
 
   RETURN json_build_object(
     'totals', v_totals,
-    'time_series', COALESCE(v_time_series, '[]'::json),
-    'top_salons', COALESCE(v_top_salons, '[]'::json),
-    'peak_times', COALESCE(v_peak_times, '[]'::json)
+    'time_series', v_time_series,
+    'top_salons', v_top_salons,
+    'peak_times', v_peak_times
   );
 END;
 $$;
