@@ -1,5 +1,6 @@
 import React from 'react'
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react'
+import * as Sentry from '@sentry/react'
 
 /**
  * Detects stale JS chunk errors that happen after a new deployment:
@@ -33,8 +34,11 @@ export default class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     this.setState({ errorInfo })
-    // In production you'd send this to a logging service
+    // Send this to Sentry logging service
     console.error('[ErrorBoundary] Uncaught error:', error, errorInfo)
+    if (import.meta.env.VITE_SENTRY_DSN) {
+      Sentry.captureException(error, { extra: errorInfo })
+    }
 
     // ── Stale-chunk auto-recovery ───────────────────────────────────────────
     // After a Vercel redeployment the hashed chunk filenames change. When a

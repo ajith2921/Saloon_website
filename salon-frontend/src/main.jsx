@@ -7,6 +7,22 @@ import AppRouter from './routes/AppRouter'
 import ErrorBoundary from './components/ErrorBoundary'
 import './i18n'
 import './index.css'
+import * as Sentry from '@sentry/react'
+
+if (import.meta.env.VITE_SENTRY_DSN) {
+  Sentry.init({
+    dsn: import.meta.env.VITE_SENTRY_DSN,
+    integrations: [
+      Sentry.browserTracingIntegration(),
+      Sentry.replayIntegration(),
+    ],
+    // Tracing
+    tracesSampleRate: 1.0, 
+    // Session Replay
+    replaysSessionSampleRate: 0.1, 
+    replaysOnErrorSampleRate: 1.0, 
+  });
+}
 
 // ── Stale-chunk recovery (global) ────────────────────────────────────────────
 // When React lazily imports a JS chunk after a new Vercel deployment, the old

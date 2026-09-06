@@ -21,6 +21,8 @@ class Settings(BaseSettings):
     # Resend Email Configuration
     resend_api_key: Optional[str] = None
 
+    # Sentry Configuration
+    sentry_dsn: Optional[str] = None
 
     # Platform fee per token (configurable, not hardcoded)
     platform_fee_per_token: float = 5.0
