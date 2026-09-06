@@ -88,7 +88,7 @@ export default function Login() {
 
           {!showEmailForm ? (
             <div className="text-center animate-fade-in">
-              <div className="relative my-6">
+              <div className="relative my-4">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-white/[0.08]"></div>
                 </div>
@@ -106,7 +106,7 @@ export default function Login() {
             </div>
           ) : (
             <div className="animate-fade-in">
-              <div className="relative my-6">
+              <div className="relative my-4">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-white/[0.08]"></div>
                 </div>
@@ -115,7 +115,7 @@ export default function Login() {
                 </div>
               </div>
 
-              <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+              <form onSubmit={handleSubmit} className="flex flex-col gap-2.5" noValidate>
                 {/* Email */}
                 <Input
                   id="email"

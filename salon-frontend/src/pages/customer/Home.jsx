@@ -154,7 +154,7 @@ export default function Home() {
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand-500/10 border border-brand-500/20 text-brand-400 text-xs font-bold uppercase tracking-widest mb-4">
               <Shield className="w-3.5 h-3.5" /> Why QueueCut?
             </div>
-            <h2 className="text-2xl sm:text-3xl font-display font-bold text-white">Smart Grooming in 3 Steps</h2>
+            <h2 className="text-2xl sm:text-3xl font-display font-bold text-white">Smart Grooming in 4 Steps</h2>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 relative z-10">
             {FEATURES.map((f, idx) => (
