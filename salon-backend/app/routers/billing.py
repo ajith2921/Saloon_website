@@ -31,10 +31,18 @@ async def create_checkout(
         raise HTTPException(status_code=403, detail="Salon ownership required.")
 
     async_supabase_admin = await get_async_supabase_admin()
-    # 1. Prevent duplicate active subscriptions
-    existing_sub = await async_supabase_admin.table("subscriptions").select("id, status").eq("salon_id", salon_id).in_("status", ["trialing", "active", "past_due"]).execute()
+    # 1. Prevent duplicate active subscriptions (ignore pending checkouts)
+    existing_sub = await async_supabase_admin.table("subscriptions").select("id, status").eq("salon_id", salon_id).in_("status", ["active", "past_due"]).execute()
     if existing_sub.data:
         raise HTTPException(status_code=400, detail="Salon already has an active subscription.")
+
+    # Check for real trialing (with an actual end date)
+    real_trial = await async_supabase_admin.table("subscriptions").select("id").eq("salon_id", salon_id).eq("status", "trialing").not_.is_("trial_ends_at", "null").execute()
+    if real_trial.data:
+        raise HTTPException(status_code=400, detail="Salon already has an active trial.")
+
+    # Clean up any abandoned checkouts
+    await async_supabase_admin.table("subscriptions").delete().eq("salon_id", salon_id).eq("status", "trialing").is_("trial_ends_at", "null").execute()
 
     # 2. Retrieve authoritative plan
     plan_resp = await async_supabase_admin.table("subscription_plans").select("*").eq("id", str(payload.plan_id)).execute()

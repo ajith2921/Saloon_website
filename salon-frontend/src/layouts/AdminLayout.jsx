@@ -55,6 +55,21 @@ export default function AdminLayout() {
     )
   }
 
+  if (isPending && isSubscriptionRoute) {
+    return (
+      <div className="min-h-screen bg-surface-primary flex flex-col">
+        <header className="h-16 flex items-center px-6 border-b border-white/[0.06] bg-surface-primary/90 backdrop-blur sticky top-0 z-10">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/admin')} className="-ml-2">
+            ← Back to Status
+          </Button>
+        </header>
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 scrollbar-thin">
+          <Outlet />
+        </main>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-surface-primary">
       {/* Skip to main content — visible on keyboard focus */}

@@ -32,13 +32,15 @@ async def get_my_subscription(
         .eq("salon_id", salon_id) \
         .in_("status", ["trialing", "active", "past_due", "cancelled"]) \
         .order("created_at", desc=True) \
-        .limit(1) \
+        .limit(5) \
         .execute()
         
-    if not res.data:
+    valid_subs = [s for s in (res.data or []) if s["status"] != "trialing" or s.get("trial_ends_at") is not None]
+        
+    if not valid_subs:
         raise HTTPException(status_code=404, detail="No active subscription found")
         
-    return res.data[0]
+    return valid_subs[0]
 
 @router.get("/entitlements", response_model=SubscriptionEntitlements)
 async def get_my_entitlements(
@@ -52,17 +54,19 @@ async def get_my_entitlements(
     async_supabase_admin = await get_async_supabase_admin()
     # We join subscriptions and subscription_plans
     res = await async_supabase_admin.table("subscriptions") \
-        .select("status, plan:subscription_plans(name, max_workers, max_services, max_monthly_tokens, max_advertisements)") \
+        .select("status, trial_ends_at, plan:subscription_plans(name, max_workers, max_services, max_monthly_tokens, max_advertisements)") \
         .eq("salon_id", salon_id) \
         .in_("status", ["trialing", "active", "past_due"]) \
         .order("created_at", desc=True) \
-        .limit(1) \
+        .limit(5) \
         .execute()
         
-    if not res.data:
+    valid_subs = [s for s in (res.data or []) if s["status"] != "trialing" or s.get("trial_ends_at") is not None]
+        
+    if not valid_subs:
         raise HTTPException(status_code=404, detail="No active subscription found")
         
-    sub = res.data[0]
+    sub = valid_subs[0]
     plan = sub.get("plan", {})
     
     return {
