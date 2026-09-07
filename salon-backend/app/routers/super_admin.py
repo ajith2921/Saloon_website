@@ -249,6 +249,52 @@ async def update_token_limit(
     return {"status": "success", "salon": res.data[0]}
 
 
+@router.delete("/salons/{salon_id}")
+@limiter.limit("5/minute")
+async def delete_salon(request: Request, salon_id: UUID, user: dict = Depends(require_role("super_admin"))):
+    """Hard delete a salon and all its associated data."""
+    async_supabase_admin = await get_async_supabase_admin()
+    
+    # Supabase foreign keys with ON DELETE CASCADE will handle tokens, services, workers, subscriptions
+    res = await async_supabase_admin.table("salons").delete().eq("id", str(salon_id)).execute()
+    
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Salon not found")
+        
+    actor_id = user.get("sub")
+    await _log_audit(actor_id, "DELETE_SALON", str(salon_id), "salon", async_supabase_admin)
+    
+    return {"status": "success", "message": "Salon fully deleted"}
+
+
+class UpdateSettingsRequest(BaseModel):
+    subscriptions_enabled: bool
+
+@router.put("/settings")
+@limiter.limit("10/minute")
+async def update_settings(
+    request: Request,
+    payload: UpdateSettingsRequest,
+    user: dict = Depends(require_role("super_admin"))
+):
+    """Update global application settings."""
+    async_supabase_admin = await get_async_supabase_admin()
+    
+    # Upsert the settings value
+    res = await async_supabase_admin.table("app_settings").upsert({
+        "key": "subscriptions_enabled",
+        "value": payload.subscriptions_enabled
+    }).execute()
+    
+    if not res.data:
+        raise HTTPException(status_code=500, detail="Failed to update settings")
+        
+    actor_id = user.get("sub")
+    await _log_audit(actor_id, "UPDATE_SETTINGS", "subscriptions_enabled", "setting", async_supabase_admin, {"new_value": payload.subscriptions_enabled})
+    
+    return {"status": "success", "settings": {"subscriptions_enabled": payload.subscriptions_enabled}}
+
+
 class GrantFreeSetupRequest(BaseModel):
     email: str
 

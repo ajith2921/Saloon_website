@@ -1,6 +1,9 @@
-import { CreditCard, Check, Zap } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { CreditCard, Check, Zap, Globe } from 'lucide-react'
 import { PageHeader, Button, ErrorState, Skeleton } from '../../components/ui'
 import { useFetch } from '../../hooks/useApi'
+import { useToast } from '../../context/ToastContext'
+import api from '../../lib/api'
 
 function PlansSkeleton() {
   return (
@@ -25,6 +28,24 @@ function SubscriptionsSkeleton() {
 export default function Subscriptions() {
   const { data: plans, loading: plansLoading, error: plansError, refetch: refetchPlans } = useFetch('/api/subscriptions/plans')
   const { data: subscriptions, loading: subsLoading, error: subsError, refetch: refetchSubs } = useFetch('/api/subscriptions/all')
+  const { data: appSettings, loading: settingsLoading, refetch: refetchSettings } = useFetch('/api/settings')
+  
+  const { success, error: showError } = useToast()
+  const [toggleLoading, setToggleLoading] = useState(false)
+  
+  const handleToggleSubscriptions = async () => {
+    const currentState = appSettings?.settings?.subscriptions_enabled ?? false
+    setToggleLoading(true)
+    try {
+      await api.put('/api/super-admin/settings', { subscriptions_enabled: !currentState })
+      success(`Subscriptions ${!currentState ? 'Enabled' : 'Disabled'} globally`)
+      refetchSettings()
+    } catch (err) {
+      showError('Failed to update subscription settings')
+    } finally {
+      setToggleLoading(false)
+    }
+  }
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -46,6 +67,26 @@ export default function Subscriptions() {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Global Subscription Toggle */}
+      <div className="card p-5 mb-8 border border-white/10 flex items-center justify-between">
+        <div className="flex items-start gap-3">
+          <Globe className="w-5 h-5 text-brand-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-bold text-white">Require Subscriptions Globally</p>
+            <p className="text-xs text-dark-200 mt-1">
+              If disabled, all salons have unrestricted access to the platform without needing a subscription plan.
+            </p>
+          </div>
+        </div>
+        <Button 
+          variant={appSettings?.settings?.subscriptions_enabled ? "secondary" : "primary"}
+          onClick={handleToggleSubscriptions}
+          loading={toggleLoading || settingsLoading}
+        >
+          {appSettings?.settings?.subscriptions_enabled ? 'Disable Subscriptions' : 'Enable Subscriptions'}
+        </Button>
       </div>
 
       {/* Plans */}

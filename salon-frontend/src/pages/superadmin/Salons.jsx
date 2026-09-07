@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Building2, Search, Check, Ban, X, Filter, CreditCard, Coins, ChevronDown } from 'lucide-react'
+import { Building2, Search, Check, Ban, X, Filter, CreditCard, Coins, ChevronDown, Trash2 } from 'lucide-react'
 import { useFetch } from '../../hooks/useApi'
 import { Skeleton, EmptyState, ErrorState, PageHeader, Card, Button, Input, Select, ConfirmModal, Modal, Spinner } from '../../components/ui'
 import { useToast } from '../../context/ToastContext'
@@ -17,6 +17,12 @@ const ACTION_MESSAGES = {
     title: 'Suspend this salon?',
     message: 'Customers will no longer be able to view or book tokens at this salon until it is reactivated. Existing active tokens will not be automatically cancelled.',
     confirmLabel: 'Yes, Suspend',
+    danger: true,
+  },
+  delete: {
+    title: 'Delete this salon completely?',
+    message: 'This will permanently remove the salon and all associated data, including tokens, workers, services, and subscriptions. This action cannot be undone.',
+    confirmLabel: 'Yes, Delete',
     danger: true,
   },
 }
@@ -297,7 +303,7 @@ function UpdateTokenLimitModal({ open, onClose, salon, onSuccess }) {
 }
 
 /** Per-row actions menu — combines status quick-actions with the "More" override dropdown */
-function SalonActionsMenu({ salon, actionLoading, onApprove, onSuspend, onGrantSub, onUpdateTokens }) {
+function SalonActionsMenu({ salon, actionLoading, onApprove, onSuspend, onDelete, onGrantSub, onUpdateTokens }) {
   const [open, setOpen] = useState(false)
 
   return (
@@ -342,6 +348,18 @@ function SalonActionsMenu({ salon, actionLoading, onApprove, onSuspend, onGrantS
         </Button>
       )}
 
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={onDelete}
+        loading={actionLoading === salon.id}
+        className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+        aria-label={`Delete ${salon.name}`}
+      >
+        <Trash2 className="w-3.5 h-3.5" /> Delete
+      </Button>
+
+      {/* --- Dropdown for complex operations --- */}
       <div className="relative">
         <Button
           variant="secondary"
@@ -414,8 +432,12 @@ export default function Salons() {
     setConfirmAction(null)
     setActionLoading(id)
     try {
-      await api.post(`/api/super-admin/salons/${id}/${action}`)
-      success(`${name} ${action === 'approve' ? 'approved' : 'suspended'} successfully`)
+      if (action === 'delete') {
+        await api.delete(`/api/super-admin/salons/${id}`)
+      } else {
+        await api.post(`/api/super-admin/salons/${id}/${action}`)
+      }
+      success(`${name} ${action === 'approve' ? 'approved' : action === 'delete' ? 'deleted' : 'suspended'} successfully`)
       refetch()
     } catch (err) {
       showError(err.response?.data?.detail || err.message || 'Action failed')
@@ -585,6 +607,7 @@ export default function Salons() {
                             actionLoading={actionLoading}
                             onApprove={() => setConfirmAction({ id: s.id, name: s.name, action: 'approve' })}
                             onSuspend={() => setConfirmAction({ id: s.id, name: s.name, action: 'suspend' })}
+                            onDelete={() => setConfirmAction({ id: s.id, name: s.name, action: 'delete' })}
                             onGrantSub={() => setGrantSubSalon(s)}
                             onUpdateTokens={() => setUpdateTokensSalon(s)}
                           />

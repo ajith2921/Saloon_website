@@ -1570,4 +1570,34 @@ GRANT ALL ON TABLE public.super_admin_audit_logs TO anon, authenticated, service
      ) ;  
  E N D ;  
  $ $ ;  
+ - -   0 3 2 _ g l o b a l _ s e t t i n g s . s q l  
+  
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   p u b l i c . a p p _ s e t t i n g s   (  
+         k e y   T E X T   P R I M A R Y   K E Y ,  
+         v a l u e   J S O N B   N O T   N U L L ,  
+         u p d a t e d _ a t   T I M E S T A M P   W I T H   T I M E   Z O N E   D E F A U L T   t i m e z o n e ( ' u t c ' : : t e x t ,   n o w ( ) )   N O T   N U L L  
+ ) ;  
+  
+ A L T E R   T A B L E   p u b l i c . a p p _ s e t t i n g s   E N A B L E   R O W   L E V E L   S E C U R I T Y ;  
+  
+ - -   A l l o w   p u b l i c   r e a d   a c c e s s   t o   s e t t i n g s  
+ D R O P   P O L I C Y   I F   E X I S T S   " S e t t i n g s   a r e   v i e w a b l e   b y   e v e r y o n e "   O N   p u b l i c . a p p _ s e t t i n g s ;  
+ C R E A T E   P O L I C Y   " S e t t i n g s   a r e   v i e w a b l e   b y   e v e r y o n e "   O N   p u b l i c . a p p _ s e t t i n g s    
+     F O R   S E L E C T   U S I N G   ( t r u e ) ;  
+  
+ - -   A l l o w   s u p e r   a d m i n s   f u l l   a c c e s s   t o   s e t t i n g s  
+ D R O P   P O L I C Y   I F   E X I S T S   " S u p e r   a d m i n   c a n   m a n a g e   s e t t i n g s "   O N   p u b l i c . a p p _ s e t t i n g s ;  
+ C R E A T E   P O L I C Y   " S u p e r   a d m i n   c a n   m a n a g e   s e t t i n g s "   O N   p u b l i c . a p p _ s e t t i n g s    
+     F O R   A L L    
+     U S I N G   (  
+         a u t h . u i d ( )   I N   ( S E L E C T   i d   F R O M   p u b l i c . p r o f i l e s   W H E R E   r o l e   =   ' s u p e r _ a d m i n ' )  
+     )  
+     W I T H   C H E C K   (  
+         a u t h . u i d ( )   I N   ( S E L E C T   i d   F R O M   p u b l i c . p r o f i l e s   W H E R E   r o l e   =   ' s u p e r _ a d m i n ' )  
+     ) ;  
+  
+ - -   I n s e r t   d e f a u l t   v a l u e   f o r   s u b s c r i p t i o n s _ e n a b l e d  
+ I N S E R T   I N T O   p u b l i c . a p p _ s e t t i n g s   ( k e y ,   v a l u e )    
+ V A L U E S   ( ' s u b s c r i p t i o n s _ e n a b l e d ' ,   ' f a l s e ' : : j s o n b )    
+ O N   C O N F L I C T   ( k e y )   D O   N O T H I N G ;  
  

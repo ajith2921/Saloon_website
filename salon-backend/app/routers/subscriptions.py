@@ -27,6 +27,23 @@ async def get_my_subscription(
         raise HTTPException(status_code=403, detail="Salon ID not found for owner")
     
     async_supabase_admin = await get_async_supabase_admin()
+    
+    # Check global toggle
+    settings_res = await async_supabase_admin.table("app_settings").select("value").eq("key", "subscriptions_enabled").execute()
+    subs_enabled = True
+    if settings_res.data and settings_res.data[0]["value"] == False:
+        subs_enabled = False
+        
+    if not subs_enabled:
+        return {
+            "id": "00000000-0000-0000-0000-000000000000",
+            "salon_id": salon_id,
+            "plan_id": "00000000-0000-0000-0000-000000000000",
+            "provider_subscription_id": "global_free",
+            "status": "active",
+            "created_at": "2026-01-01T00:00:00Z"
+        }
+
     res = await async_supabase_admin.table("subscriptions") \
         .select("*") \
         .eq("salon_id", salon_id) \
@@ -52,6 +69,23 @@ async def get_my_entitlements(
         raise HTTPException(status_code=403, detail="Salon ID not found for owner")
     
     async_supabase_admin = await get_async_supabase_admin()
+    
+    # Check global toggle
+    settings_res = await async_supabase_admin.table("app_settings").select("value").eq("key", "subscriptions_enabled").execute()
+    subs_enabled = True
+    if settings_res.data and settings_res.data[0]["value"] == False:
+        subs_enabled = False
+        
+    if not subs_enabled:
+        return {
+            "plan_name": "Global Free Tier",
+            "status": "active",
+            "max_workers": 9999,
+            "max_services": 9999,
+            "max_monthly_tokens": 999999,
+            "max_advertisements": 9999
+        }
+
     # We join subscriptions and subscription_plans
     res = await async_supabase_admin.table("subscriptions") \
         .select("status, trial_ends_at, plan:subscription_plans(name, max_workers, max_services, max_monthly_tokens, max_advertisements)") \

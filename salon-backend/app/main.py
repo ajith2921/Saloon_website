@@ -83,3 +83,22 @@ async def health_check(response: Response):
         "message": "Backend is running!",
         "database": db_status
     }
+
+@app.get("/api/settings")
+@limiter.limit("60/minute")
+async def get_public_settings(request: Request):
+    """Expose global settings like subscriptions_enabled to the frontend."""
+    async_supabase_admin = await get_async_supabase_admin()
+    try:
+        res = await async_supabase_admin.table("app_settings").select("key, value").execute()
+        settings_dict = {row["key"]: row["value"] for row in res.data} if res.data else {}
+        
+        # Default fallback if not found
+        if "subscriptions_enabled" not in settings_dict:
+            settings_dict["subscriptions_enabled"] = False
+            
+        return {"settings": settings_dict}
+    except Exception as e:
+        # Fallback if table doesn't exist yet
+        return {"settings": {"subscriptions_enabled": False}}
+
