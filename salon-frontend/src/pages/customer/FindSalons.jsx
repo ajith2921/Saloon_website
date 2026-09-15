@@ -8,6 +8,7 @@ import { motion } from 'framer-motion'
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useSalons } from '../../hooks/useApi'
+import { useDebounce } from '../../hooks/useDebounce'
 import { StarRating, EmptyState, Skeleton, Button, Input, Select, Card, PageHeader } from '../../components/ui'
 
 import { useTranslation } from 'react-i18next'
@@ -119,6 +120,9 @@ function Ticket2(props) {
 export default function FindSalons() {
   const { t } = useTranslation()
   const [search, setSearch]   = useState('')
+  // ⚡ Bolt Optimization: Debounce search input to prevent expensive re-filtering
+  // and re-rendering on every keystroke. Improves typing responsiveness.
+  const debouncedSearch = useDebounce(search, 300)
   const [sortBy, setSortBy]   = useState('rating')
   const [onlyOpen, setOnlyOpen] = useState(false)
   const [showMap, setShowMap] = useState(false)
@@ -130,8 +134,8 @@ export default function FindSalons() {
   const filtered = useMemo(() => {
     let list = [...allSalons]
 
-    if (search.trim()) {
-      const q = search.toLowerCase()
+    if (debouncedSearch.trim()) {
+      const q = debouncedSearch.toLowerCase()
       list = list.filter((s) =>
         s.name.toLowerCase().includes(q) ||
         s.city?.toLowerCase().includes(q) ||
@@ -154,7 +158,7 @@ export default function FindSalons() {
     if (sortBy === 'dist')   list.sort((a, b) => (a.distance_km ?? 999) - (b.distance_km ?? 999))
 
     return list
-  }, [allSalons, search, sortBy, onlyOpen])
+  }, [allSalons, debouncedSearch, sortBy, onlyOpen])
 
   return (
     <div className="container-app py-8">
