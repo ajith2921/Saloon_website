@@ -255,11 +255,25 @@ async def delete_salon(request: Request, salon_id: UUID, user: dict = Depends(re
     """Hard delete a salon and all its associated data."""
     async_supabase_admin = await get_async_supabase_admin()
     
+    # 1. Fetch the salon to get the owner_id
+    salon_res = await async_supabase_admin.table("salons").select("owner_id").eq("id", str(salon_id)).execute()
+    if not salon_res.data:
+        raise HTTPException(status_code=404, detail="Salon not found")
+        
+    owner_id = salon_res.data[0].get("owner_id")
+    
     # Supabase foreign keys with ON DELETE CASCADE will handle tokens, services, workers, subscriptions
     res = await async_supabase_admin.table("salons").delete().eq("id", str(salon_id)).execute()
     
     if not res.data:
         raise HTTPException(status_code=404, detail="Salon not found")
+        
+    # Check if the owner has any other salons left. If not, downgrade their role to customer
+    if owner_id:
+        other_salons = await async_supabase_admin.table("salons").select("id").eq("owner_id", owner_id).execute()
+        if not other_salons.data:
+            # Downgrade user role
+            await async_supabase_admin.table("profiles").update({"role": "customer"}).eq("id", owner_id).execute()
         
     actor_id = user.get("sub")
     await _log_audit(actor_id, "DELETE_SALON", str(salon_id), "salon", async_supabase_admin)

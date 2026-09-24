@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from .routers import tokens, ratings, analytics, revenue, super_admin, advertisements, loyalty, salons, services, workers, notifications, subscriptions, billing, webhooks
+from .routers import tokens, ratings, analytics, revenue, super_admin, advertisements, loyalty, salons, services, workers, notifications, subscriptions, billing, webhooks, verify
 from .config import settings
 
 from slowapi import _rate_limit_exceeded_handler
@@ -52,6 +52,7 @@ app.include_router(notifications.router)
 app.include_router(subscriptions.router)
 app.include_router(billing.router)
 app.include_router(webhooks.router)
+app.include_router(verify.router)
 
 from .database import supabase_admin
 

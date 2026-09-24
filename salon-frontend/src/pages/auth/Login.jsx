@@ -68,7 +68,8 @@ export default function Login() {
             onClick={async () => {
               try {
                 setLoading(true)
-                await signInWithGoogle()
+                const redirectPath = from === '/' ? '' : from
+                await signInWithGoogle(window.location.origin + redirectPath)
               } catch {
                 showError('Could not sign in with Google.')
                 setLoading(false)

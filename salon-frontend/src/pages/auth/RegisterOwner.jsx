@@ -11,9 +11,10 @@ export default function RegisterOwner() {
   const { success, error: showError } = useToast()
   const navigate = useNavigate()
 
-  const [step, setStep] = useState(1) // 1: Personal Info, 2: Salon Info
+  const [step, setStep] = useState(1) // 1: Personal Info, 2: Salon Info, 3: Phone Verification
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState({})
+  const [otpCode, setOtpCode] = useState('')
 
   const [form, setForm] = useState({
     // Personal Info
@@ -72,6 +73,36 @@ export default function RegisterOwner() {
       // We wait a second to allow the database trigger to create the profile
       await new Promise(resolve => setTimeout(resolve, 1500))
 
+      // Step 1.5: Request OTP
+      await api.post('/api/verify/send-otp', { phone: form.phone })
+      
+      setStep(3)
+      success('Account created!', 'Please verify your phone number.')
+    } catch (err) {
+      // If error mentions auth, it might be that account exists
+      if (err.message && err.message.toLowerCase().includes('already registered')) {
+        showError('Email is already registered. Please login and click "Partner with us".')
+        navigate('/login')
+      } else {
+        showError(err.response?.data?.detail || err.message || 'Registration failed.')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault()
+    if (!otpCode.trim() || otpCode.length < 4) {
+      setErrors({ otp: 'Please enter a valid OTP' })
+      return
+    }
+    
+    setLoading(true)
+    try {
+      // Check OTP
+      await api.post('/api/verify/check-otp', { phone: form.phone, otp: otpCode })
+      
       // Step 2: Register Salon via API
       await api.post('/api/salons', {
         name: form.salonName,
@@ -87,13 +118,7 @@ export default function RegisterOwner() {
       success('Welcome aboard!', 'Your salon has been registered.')
       navigate('/admin', { replace: true })
     } catch (err) {
-      // If error mentions auth, it might be that account exists
-      if (err.message && err.message.toLowerCase().includes('already registered')) {
-        showError('Email is already registered. Please login and click "Partner with us".')
-        navigate('/login')
-      } else {
-        showError(err.response?.data?.detail || err.message || 'Registration failed.')
-      }
+      showError(err.response?.data?.detail || err.message || 'Verification failed.')
     } finally {
       setLoading(false)
     }
@@ -127,8 +152,8 @@ export default function RegisterOwner() {
             </div>
           </div>
 
-          <form onSubmit={step === 2 ? handleSubmit : (e) => e.preventDefault()} noValidate>
-            {step === 1 ? (
+          <form onSubmit={step === 1 ? (e) => e.preventDefault() : step === 2 ? handleSubmit : handleVerifyOtp} noValidate>
+            {step === 1 && (
               <div className="space-y-4 animate-fade-in">
                 <Input
                   label="Full Name"
@@ -178,7 +203,9 @@ export default function RegisterOwner() {
                   Continue <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               </div>
-            ) : (
+            )}
+            
+            {step === 2 && (
               <div className="space-y-4 animate-fade-in">
                 <Input
                   label="Shop Name"
@@ -224,6 +251,57 @@ export default function RegisterOwner() {
                   >
                     Launch Shop <CheckCircle className="w-4 h-4 ml-2" />
                   </Button>
+                </div>
+              </div>
+            )}
+            
+            {step === 3 && (
+              <div className="space-y-4 animate-fade-in">
+                <div className="text-center mb-6">
+                  <h3 className="text-xl font-bold text-white mb-2">Verify Phone Number</h3>
+                  <p className="text-dark-100 text-sm">We've sent a code to {form.phone}</p>
+                </div>
+                
+                <Input
+                  label="Verification Code (OTP)"
+                  id="otpCode"
+                  type="text"
+                  icon={Lock}
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value)}
+                  error={errors.otp}
+                  placeholder="Enter 6-digit code"
+                  maxLength={6}
+                />
+                
+                <Button 
+                  type="submit"
+                  fullWidth 
+                  className="mt-6"
+                  loading={loading}
+                >
+                  Verify & Create Salon <CheckCircle className="w-4 h-4 ml-2" />
+                </Button>
+                
+                <div className="text-center mt-4">
+                  <button 
+                    type="button" 
+                    className="text-sm text-brand-400 hover:text-brand-300"
+                    onClick={async () => {
+                      setLoading(true)
+                      try {
+                        await api.post('/api/verify/send-otp', { phone: form.phone })
+                        success('OTP Resent', 'Please check your messages.')
+                      } catch (err) {
+                        showError('Failed to resend OTP')
+                      } finally {
+                        setLoading(false)
+                      }
+                    }}
+                    disabled={loading}
+                  >
+                    Resend Code
+                  </button>
                 </div>
               </div>
             )}

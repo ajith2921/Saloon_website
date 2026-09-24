@@ -266,6 +266,11 @@ def create_salon(request: Request, data: SalonCreate, user: dict = Depends(get_c
     if db_role not in ("customer", "salon_owner", "super_admin"):
         raise HTTPException(status_code=403, detail="Workers cannot create a salon")
     
+    # Check if phone is verified
+    profile_res = supabase_admin.table("profiles").select("phone_verified").eq("id", user.get("sub") or user.get("id")).execute()
+    if not profile_res.data or not profile_res.data[0].get("phone_verified"):
+        raise HTTPException(status_code=403, detail="Phone number must be verified before creating a salon")
+    
     # Check if they already have a salon (usually 1 per owner)
     if user.get("db_salon_id"):
         raise HTTPException(status_code=400, detail="User already has a salon linked")

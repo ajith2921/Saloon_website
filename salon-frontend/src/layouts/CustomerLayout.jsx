@@ -81,6 +81,22 @@ export default function CustomerLayout() {
                     Partner with us
                   </Link>
                 )}
+                {profile?.role === 'salon_owner' && (
+                  <Link
+                    to="/admin"
+                    className="text-sm font-medium text-brand-400 hover:text-brand-300 transition-colors hidden sm:block"
+                  >
+                    Dashboard
+                  </Link>
+                )}
+                {profile?.role === 'super_admin' && (
+                  <Link
+                    to="/super-admin"
+                    className="text-sm font-medium text-brand-400 hover:text-brand-300 transition-colors hidden sm:block"
+                  >
+                    Super Dashboard
+                  </Link>
+                )}
                 <Link
                   to="/notifications"
                   aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
