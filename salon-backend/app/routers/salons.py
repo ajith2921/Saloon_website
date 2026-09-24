@@ -286,9 +286,15 @@ def create_salon(request: Request, data: SalonCreate, user: dict = Depends(get_c
         if free_setup_res.data:
             free_setup = free_setup_res.data[0]
 
-    # New salons start as pending if created by a customer/owner.
-    # Super admins can theoretically bypass this later via approve endpoint.
-    payload["status"] = "active" if free_setup else "pending"
+    # Check if the user previously had a salon deleted/suspended
+    audit_res = supabase_admin.table("super_admin_audit_logs").select("id").eq("action", "DELETE_SALON").contains("metadata", {"owner_id": payload["owner_id"]}).execute()
+    
+    if audit_res.data:
+        # User had a salon deleted by admin before, require approval again
+        payload["status"] = "pending"
+    else:
+        # New salons are now auto-approved to 'active'.
+        payload["status"] = "active"
 
     # Insert into salons
     res = supabase_admin.table("salons").insert(payload).execute()

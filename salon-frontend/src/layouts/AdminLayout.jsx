@@ -1,23 +1,31 @@
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import AdminSidebar from '../components/navigation/AdminSidebar'
-import { Bell, LayoutDashboard, Ticket, Users, Settings, Clock, LogOut, CreditCard } from 'lucide-react'
+import { Bell, LayoutDashboard, Ticket, Users, Settings, Clock, LogOut, CreditCard, Menu, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import Button from '../components/ui/Button'
+import { useTranslation } from 'react-i18next'
 
 export default function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
+  const { t } = useTranslation()
+
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setMobileMenuOpen(false)
+  }, [location.pathname])
   const { isOwner, profile, signOut } = useAuth()
   const mobileNav = isOwner ? [
-    { to: '/admin', icon: LayoutDashboard, label: 'Dash' },
-    { to: '/admin/queue', icon: Ticket, label: 'Queue' },
-    { to: '/admin/customers', icon: Users, label: 'Cust' },
-    { to: '/admin/settings', icon: Settings, label: 'Settings' },
+    { to: '/admin', icon: LayoutDashboard, label: t('admin_nav.dashboard') },
+    { to: '/admin/queue', icon: Ticket, label: t('admin_nav.live_queue') },
+    { to: '/admin/customers', icon: Users, label: t('admin_nav.customers') },
+    { to: '/admin/settings', icon: Settings, label: t('admin_nav.settings') },
   ] : [
-    { to: '/admin/queue', icon: Ticket, label: 'Queue' },
+    { to: '/admin/queue', icon: Ticket, label: t('admin_nav.live_queue') },
   ]
 
   const isPending = isOwner && profile?.salons?.[0]?.status === 'pending'
@@ -80,6 +88,29 @@ export default function AdminLayout() {
         Skip to main content
       </a>
 
+      {/* Mobile Sidebar Overlay */}
+      {mobileMenuOpen && (
+        <div className="md:hidden fixed inset-0 z-[100] flex">
+          <div 
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity" 
+            onClick={() => setMobileMenuOpen(false)} 
+            aria-hidden="true"
+          />
+          <div className="relative flex flex-col w-64 max-w-[80%] bg-surface-secondary h-full animate-slide-right shadow-2xl">
+            <button 
+              className="absolute top-4 right-4 p-2 text-dark-200 hover:text-white z-50 bg-black/20 rounded-full"
+              onClick={() => setMobileMenuOpen(false)}
+              aria-label="Close menu"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="flex-1 overflow-y-auto h-full w-full">
+               <AdminSidebar collapsed={false} onToggle={() => {}} />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Sidebar - Desktop only */}
       <div className="hidden md:flex">
         <AdminSidebar collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
@@ -88,8 +119,17 @@ export default function AdminLayout() {
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0 pb-16 md:pb-0">
         {/* Top bar */}
-        <header className="h-16 flex items-center justify-between px-6 border-b border-white/[0.06] bg-surface-primary/90 backdrop-blur sticky top-0 z-10">
-          <h1 className="text-sm font-semibold text-dark-100">Admin Area</h1>
+        <header className="h-16 flex items-center justify-between px-4 sm:px-6 border-b border-white/[0.06] bg-surface-primary/90 backdrop-blur sticky top-0 z-10">
+          <div className="flex items-center gap-3">
+            <button
+              className="md:hidden p-2 -ml-2 text-dark-200 hover:text-white transition-colors"
+              onClick={() => setMobileMenuOpen(true)}
+              aria-label="Open menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <h1 className="text-sm font-semibold text-dark-100 hidden sm:block">{t('admin_nav.admin_panel')}</h1>
+          </div>
           <div className="flex items-center gap-4">
             <LanguageSwitcher />
             <NavLink

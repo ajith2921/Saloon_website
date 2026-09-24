@@ -5,28 +5,30 @@ import {
   LogOut, ChevronLeft, Menu, Eye, UserCheck, CreditCard
 } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
+import { useTranslation } from 'react-i18next'
 
 const ownerNav = [
-  { to: '/admin',                label: 'Dashboard',       icon: LayoutDashboard, exact: true },
-  { to: '/admin/queue',          label: 'Live Queue',      icon: Ticket },
-  { to: '/admin/workers',        label: 'Workers',         icon: Users },
-  { to: '/admin/services',       label: 'Services',        icon: Briefcase },
-  { to: '/admin/customers',      label: 'Customers',       icon: UserCheck },
-  { to: '/admin/ratings',        label: 'Ratings',         icon: Star },
-  { to: '/admin/revenue',        label: 'Revenue',         icon: DollarSign },
-  { to: '/admin/analytics',      label: 'Analytics',       icon: BarChart2 },
-  { to: '/admin/advertisements',  label: 'Ads',            icon: Megaphone },
-  { to: '/admin/subscription',   label: 'Subscription',    icon: CreditCard },
-  { to: '/admin/settings',       label: 'Settings',        icon: Settings },
+  { to: '/admin',                i18nKey: 'dashboard',       icon: LayoutDashboard, exact: true },
+  { to: '/admin/queue',          i18nKey: 'live_queue',      icon: Ticket },
+  { to: '/admin/workers',        i18nKey: 'workers',         icon: Users },
+  { to: '/admin/services',       i18nKey: 'services',        icon: Briefcase },
+  { to: '/admin/customers',      i18nKey: 'customers',       icon: UserCheck },
+  { to: '/admin/ratings',        i18nKey: 'ratings',         icon: Star },
+  { to: '/admin/revenue',        i18nKey: 'revenue',         icon: DollarSign },
+  { to: '/admin/analytics',      i18nKey: 'analytics',       icon: BarChart2 },
+  { to: '/admin/advertisements',  i18nKey: 'ads',            icon: Megaphone },
+  { to: '/admin/subscription',   i18nKey: 'subscription',    icon: CreditCard },
+  { to: '/admin/settings',       i18nKey: 'settings',        icon: Settings },
 ]
 
 const workerNav = [
-  { to: '/admin/queue', label: 'Live Queue', icon: Ticket },
-  { to: '/admin/ratings', label: 'My Ratings', icon: Star },
+  { to: '/admin/queue', i18nKey: 'live_queue', icon: Ticket },
+  { to: '/admin/ratings', i18nKey: 'ratings', icon: Star },
 ]
 
 export default function AdminSidebar({ collapsed, onToggle }) {
   const { profile, signOut, isOwner } = useAuth()
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const navItems = isOwner ? ownerNav : workerNav
 
@@ -48,7 +50,7 @@ export default function AdminSidebar({ collapsed, onToggle }) {
         {!collapsed && (
           <div className="overflow-hidden">
             <p className="text-sm font-bold text-white whitespace-nowrap">QueueCut</p>
-            <p className="text-[10px] text-dark-200 whitespace-nowrap uppercase tracking-wider">Admin Panel</p>
+            <p className="text-[10px] text-dark-200 whitespace-nowrap uppercase tracking-wider">{t('admin_nav.admin_panel')}</p>
           </div>
         )}
         <button
@@ -81,12 +83,12 @@ export default function AdminSidebar({ collapsed, onToggle }) {
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto py-3 px-2 scrollbar-thin" aria-label="Admin navigation">
         <div className="flex flex-col gap-0.5">
-          {navItems.map(({ to, label, icon: Icon, exact }) => (
+          {navItems.map(({ to, i18nKey, icon: Icon, exact }) => (
             <NavLink
               key={to}
               to={to}
               end={exact}
-              aria-label={collapsed ? label : undefined}
+              aria-label={collapsed ? t(`admin_nav.${i18nKey}`) : undefined}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-150 group ${
                   isActive
@@ -98,7 +100,7 @@ export default function AdminSidebar({ collapsed, onToggle }) {
               {({ isActive }) => (
                 <>
                   <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-brand-400' : ''}`} aria-hidden="true" />
-                  {!collapsed && <span className="text-sm font-medium truncate">{label}</span>}
+                  {!collapsed && <span className="text-sm font-medium truncate">{t(`admin_nav.${i18nKey}`)}</span>}
                 </>
               )}
             </NavLink>
@@ -110,19 +112,19 @@ export default function AdminSidebar({ collapsed, onToggle }) {
       <div className="p-3 border-t border-white/[0.06] flex flex-col gap-1">
         <NavLink
           to="/"
-          aria-label={collapsed ? 'Customer View' : undefined}
+          aria-label={collapsed ? t('admin_nav.customer_view') : undefined}
           className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-dark-100 hover:text-white hover:bg-white/5 transition-all"
         >
           <Eye className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
-          {!collapsed && <span className="text-sm font-medium">Customer View</span>}
+          {!collapsed && <span className="text-sm font-medium">{t('admin_nav.customer_view')}</span>}
         </NavLink>
         <button
           onClick={handleSignOut}
-          aria-label="Sign out"
+          aria-label={t('admin_nav.sign_out')}
           className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all w-full focus-visible:ring-2 focus-visible:ring-red-500/50 focus:outline-none"
         >
           <LogOut className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
-          {!collapsed && <span className="text-sm font-medium">Sign Out</span>}
+          {!collapsed && <span className="text-sm font-medium">{t('admin_nav.sign_out')}</span>}
         </button>
       </div>
     </aside>

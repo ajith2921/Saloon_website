@@ -7,6 +7,7 @@ const Select = forwardRef(({
   className = '',
   wrapperClassName = '',
   children,
+  options,
   ...props 
 }, ref) => {
   const errorId = props.id ? `${props.id}-error` : undefined
@@ -28,7 +29,9 @@ const Select = forwardRef(({
           aria-describedby={error && errorId ? errorId : undefined}
           {...props}
         >
-          {children}
+          {options ? options.map((opt, i) => (
+            <option key={i} value={opt.value}>{opt.label}</option>
+          )) : children}
         </select>
         {/* Decorative chevron — hidden from assistive technology */}
         <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-dark-200" aria-hidden="true">

@@ -12,6 +12,22 @@ const resources = {
         register: "Register",
         dashboard: "Dashboard"
       },
+      admin_nav: {
+        dashboard: "Dashboard",
+        live_queue: "Live Queue",
+        workers: "Workers",
+        services: "Services",
+        customers: "Customers",
+        ratings: "Ratings",
+        revenue: "Revenue",
+        analytics: "Analytics",
+        ads: "Ads",
+        subscription: "Subscription",
+        settings: "Settings",
+        customer_view: "Customer View",
+        sign_out: "Sign Out",
+        admin_panel: "Admin Panel"
+      },
       hero: {
         title: "Skip the queue. Visit your salon on time.",
         subtitle: "Digital tokens for modern men's salons. Track your position live and never wait in a crowded shop again.",
@@ -89,6 +105,22 @@ const resources = {
         register: "रजिस्टर",
         dashboard: "डैशबोर्ड"
       },
+      admin_nav: {
+        dashboard: "डैशबोर्ड",
+        live_queue: "लाइव कतार",
+        workers: "कर्मचारी",
+        services: "सेवाएं",
+        customers: "ग्राहक",
+        ratings: "रेटिंग",
+        revenue: "राजस्व",
+        analytics: "एनालिटिक्स",
+        ads: "विज्ञापन",
+        subscription: "सदस्यता",
+        settings: "सेटिंग्स",
+        customer_view: "ग्राहक दृश्य",
+        sign_out: "साइन आउट",
+        admin_panel: "व्यवस्थापक पैनल"
+      },
       hero: {
         title: "कतार छोड़ें। समय पर अपने सैलून जाएँ।",
         subtitle: "आधुनिक पुरुषों के सैलून के लिए डिजिटल टोकन। अपनी स्थिति को लाइव ट्रैक करें और कभी भी भीड़-भाड़ वाली दुकान में इंतजार न करें।",
@@ -165,6 +197,22 @@ const resources = {
         login: "உள்நுழைக",
         register: "பதிவு செய்க",
         dashboard: "டாஷ்போர்டு"
+      },
+      admin_nav: {
+        dashboard: "டாஷ்போர்டு",
+        live_queue: "நேரலை வரிசை",
+        workers: "பணியாளர்கள்",
+        services: "சேவைகள்",
+        customers: "வாடிக்கையாளர்கள்",
+        ratings: "மதிப்பீடுகள்",
+        revenue: "வருவாய்",
+        analytics: "பகுப்பாய்வு",
+        ads: "விளம்பரங்கள்",
+        subscription: "சந்தா",
+        settings: "அமைப்புகள்",
+        customer_view: "வாடிக்கையாளர் பார்வை",
+        sign_out: "வெளியேறு",
+        admin_panel: "நிர்வாக குழு"
       },
       hero: {
         title: "வரிசையைத் தவிர்க்கவும். உங்கள் சலூனுக்கு சரியான நேரத்தில் செல்லுங்கள்.",

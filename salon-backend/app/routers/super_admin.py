@@ -276,7 +276,7 @@ async def delete_salon(request: Request, salon_id: UUID, user: dict = Depends(re
             await async_supabase_admin.table("profiles").update({"role": "customer"}).eq("id", owner_id).execute()
         
     actor_id = user.get("sub")
-    await _log_audit(actor_id, "DELETE_SALON", str(salon_id), "salon", async_supabase_admin)
+    await _log_audit(actor_id, "DELETE_SALON", str(salon_id), "salon", async_supabase_admin, {"owner_id": owner_id})
     
     return {"status": "success", "message": "Salon fully deleted"}
 
