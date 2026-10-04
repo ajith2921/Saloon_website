@@ -15,7 +15,7 @@ function avatar(name) {
 
 export default function Customers() {
   const { profile } = useAuth()
-  const salonId = profile?.salons?.[0]?.id
+  const salonId = profile?.db_salon_id ?? profile?.salons?.[0]?.id
 
   const { data, loading, refetch } = useSalonCustomers(salonId)
   const customers = data?.customers ?? []
@@ -69,7 +69,8 @@ export default function Customers() {
         </div>
       ) : (
         <div className="card p-0 overflow-hidden">
-          <table className="w-full text-left text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm min-w-[480px]">
             <thead>
               <tr className="bg-surface-tertiary text-dark-200 border-b border-white/[0.06]">
                 <th className="p-4 font-medium">Customer</th>
@@ -111,6 +112,7 @@ export default function Customers() {
               ))}
             </tbody>
           </table>
+          </div>
         </div>
       )}
     </div>

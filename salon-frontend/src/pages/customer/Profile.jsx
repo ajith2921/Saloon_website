@@ -129,24 +129,7 @@ export default function Profile() {
           </div>
         </Card>
 
-        {/* Loyalty & Referral */}
-        <Card className="p-5">
-          <h2 className="text-base font-bold text-white mb-4">Loyalty & Referrals</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-surface-tertiary rounded-xl p-3 text-center">
-              <Gift className="w-5 h-5 text-brand-400 mx-auto mb-1" />
-              <p className="text-xl font-bold text-white">{profile?.loyalty_points ?? 0}</p>
-              <p className="text-xs text-dark-200">Loyalty Points</p>
-            </div>
-            <div className="bg-surface-tertiary rounded-xl p-3 text-center">
-              <p className="text-xs text-dark-200 mb-1">Your Referral Code</p>
-              <p className="font-mono font-bold text-brand-400 text-sm">{profile?.referral_code ?? '—'}</p>
-              <button onClick={copyReferral} className="mt-1 text-[10px] text-dark-200 hover:text-white flex items-center justify-center gap-1 mx-auto transition-colors">
-                <Copy className="w-3 h-3" /> Copy
-              </button>
-            </div>
-          </div>
-        </Card>
+
       </div>
     </div>
   )

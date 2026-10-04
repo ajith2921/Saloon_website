@@ -12,7 +12,6 @@ const navItems = [
   { to: '/salons',       label: 'Find Salons',  icon: MapPin },
   { to: '/my-token',     label: 'My Token',     icon: Ticket,   auth: true },
   { to: '/history',      label: 'History',      icon: History,  auth: true },
-  { to: '/loyalty',      label: 'Rewards',      icon: Gift,     auth: true, role: 'customer' },
 ]
 
 export default function CustomerNavbar() {
@@ -183,16 +182,7 @@ export default function CustomerNavbar() {
                         >
                           <User className="w-4 h-4" aria-hidden="true" /> Profile
                         </Link>
-                        {profile?.loyalty_points > 0 && (
-                          <Link
-                            to="/loyalty"
-                            role="menuitem"
-                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-dark-100 hover:text-white hover:bg-white/5 transition-colors focus-visible:ring-2 focus-visible:ring-brand-500/50 focus:outline-none"
-                            onClick={() => setProfileOpen(false)}
-                          >
-                            <Star className="w-4 h-4" aria-hidden="true" /> {profile.loyalty_points} points
-                          </Link>
-                        )}
+
                         {adminLink && (
                           <>
                             <div className="divider my-1" role="none" />

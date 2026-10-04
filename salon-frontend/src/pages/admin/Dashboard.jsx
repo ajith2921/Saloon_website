@@ -23,11 +23,14 @@ export default function Dashboard() {
       {salon?.status === 'pending' && (
         <div className="mb-6 flex items-start gap-3 bg-brand-500/10 border border-brand-500/20 rounded-xl p-4">
           <Info className="w-5 h-5 text-brand-400 flex-shrink-0 mt-0.5" />
-          <div>
+          <div className="flex-1">
             <p className="text-sm font-semibold text-brand-400 mb-1">Salon Pending Approval</p>
-            <p className="text-xs text-dark-100 leading-relaxed">
-              Your salon has been registered and is currently pending administrator approval. 
-              You can configure your services and workers in the meantime, but public customers cannot see your salon yet.
+            <p className="text-xs text-dark-100 leading-relaxed mb-2">
+              Your salon is registered and awaiting administrator approval. This typically takes <strong className="text-white">1–2 business days</strong>.
+              In the meantime, you can set up your services, add barbers, and configure settings — customers won't see your salon until it's approved.
+            </p>
+            <p className="text-xs text-dark-200">
+              Questions? Email <span className="text-brand-400">support@queuecut.com</span>
             </p>
           </div>
         </div>
@@ -57,7 +60,7 @@ export default function Dashboard() {
         </>
       ) : (
         <>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-8">
             <StatCard
               label="Queue (Active)"
               value={stats?.waiting ?? 0}

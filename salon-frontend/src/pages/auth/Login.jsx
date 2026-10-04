@@ -21,6 +21,22 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState({})
 
+  const friendlyError = (msg = '') => {
+    if (!msg) return 'Something went wrong. Please try again.'
+    const m = msg.toLowerCase()
+    if (m.includes('invalid login') || m.includes('invalid credentials') || m.includes('email not confirmed') && m.includes('incorrect'))
+      return 'Incorrect email or password. Please try again.'
+    if (m.includes('email not confirmed'))
+      return 'Please verify your email address before logging in. Check your inbox.'
+    if (m.includes('user not found'))
+      return 'No account found with this email. Please register first.'
+    if (m.includes('too many requests') || m.includes('rate limit'))
+      return 'Too many attempts. Please wait a few minutes and try again.'
+    if (m.includes('network') || m.includes('fetch'))
+      return 'Connection error. Please check your internet and try again.'
+    return msg
+  }
+
   const validate = () => {
     const e = {}
     if (!form.email)    e.email    = 'Email is required'
@@ -38,7 +54,7 @@ export default function Login() {
       success('Welcome back!', 'Signed in successfully')
       navigate(from, { replace: true })
     } catch (err) {
-      showError(err.message || 'Invalid credentials. Please try again.')
+      showError(friendlyError(err.message))
     } finally {
       setLoading(false)
     }

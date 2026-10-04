@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Play, Check, SkipForward, RefreshCw, Volume2, UserPlus, UserCog } from 'lucide-react'
+import { Play, Check, SkipForward, RefreshCw, Volume2, UserPlus, UserCog, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../../context/AuthContext'
 import { useRealtimeQueue } from '../../hooks/useRealtime'
@@ -199,7 +199,7 @@ export default function QueueManagement() {
           <Card className="p-5">
             <h2 className="text-sm font-bold text-dark-100 uppercase tracking-wider mb-4">Completed Today</h2>
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-sm">
+              <table className="w-full text-left text-sm min-w-[480px]">
                 <caption className="sr-only">Tokens completed or skipped today</caption>
                 <thead>
                   <tr className="text-dark-200 border-b border-white/[0.06]">
@@ -277,6 +277,16 @@ export default function QueueManagement() {
                       >
                         Call
                       </Button>
+                      <Button 
+                        variant="ghost"
+                        onClick={() => updateStatus(t.id, 'cancel')}
+                        loading={actionLoading === t.id}
+                        disabled={actionLoading !== null}
+                        className="px-2 py-1 text-[10px] h-auto !text-red-400 hover:!bg-red-500/10"
+                        aria-label={`Cancel token ${t.token_number}`}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
                     </div>
                   </motion.div>
                 ))}
@@ -329,7 +339,7 @@ export default function QueueManagement() {
 
       {/* Add Walk-in Modal */}
       <Modal 
-        isOpen={walkInModalOpen} 
+        open={walkInModalOpen} 
         onClose={() => setWalkInModalOpen(false)} 
         title="Add Walk-in Token"
       >
@@ -383,7 +393,7 @@ export default function QueueManagement() {
 
       {/* Reassign Modal */}
       <Modal 
-        isOpen={reassignModalOpen} 
+        open={reassignModalOpen} 
         onClose={() => setReassignModalOpen(false)} 
         title="Reassign Token"
       >

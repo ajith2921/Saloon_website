@@ -37,7 +37,7 @@ function LocationPicker({ position, setPosition }) {
 
 export default function Settings() {
   const { profile } = useAuth()
-  const salonId = profile?.salons?.[0]?.id
+  const salonId = profile?.db_salon_id ?? profile?.salons?.[0]?.id
 
   const { data: salon, loading } = useSalon(salonId)
   const { success, error: showError } = useToast()

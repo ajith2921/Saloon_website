@@ -30,6 +30,20 @@ export default function RegisterOwner() {
 
   const set = (key) => (e) => setForm({ ...form, [key]: e.target.value })
 
+  const friendlyError = (msg = '') => {
+    if (!msg) return 'Registration failed. Please try again.'
+    const m = msg.toLowerCase()
+    if (m.includes('user already registered') || m.includes('already been registered') || m.includes('email already'))
+      return 'An account with this email already exists. Try logging in instead.'
+    if (m.includes('password') && (m.includes('weak') || m.includes('short')))
+      return 'Password is too weak. Use at least 8 characters with a mix of letters and numbers.'
+    if (m.includes('invalid email') || m.includes('email is invalid'))
+      return 'Please enter a valid email address.'
+    if (m.includes('too many requests') || m.includes('rate limit'))
+      return 'Too many attempts. Please wait a few minutes and try again.'
+    return msg
+  }
+
   const validateStep1 = () => {
     const e = {}
     if (!form.fullName.trim())       e.fullName = 'Name is required'
@@ -79,12 +93,11 @@ export default function RegisterOwner() {
       setStep(3)
       success('Account created!', 'Please verify your phone number.')
     } catch (err) {
-      // If error mentions auth, it might be that account exists
       if (err.message && err.message.toLowerCase().includes('already registered')) {
-        showError('Email is already registered. Please login and click "Partner with us".')
+        showError('Email is already registered. Please login and click "Register Shop".')
         navigate('/login')
       } else {
-        showError(err.response?.data?.detail || err.message || 'Registration failed.')
+        showError(err.response?.data?.detail || friendlyError(err.message))
       }
     } finally {
       setLoading(false)

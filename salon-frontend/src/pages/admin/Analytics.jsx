@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts'
 import { TrendingUp, Users, Clock, CheckCircle, Download } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
@@ -5,12 +6,21 @@ import { useFetch } from '../../hooks/useApi'
 import { StatCard, Spinner, Card, Button } from '../../components/ui'
 import NoSalonEmptyState from '../../components/ui/NoSalonEmptyState'
 
+const RANGES = [
+  { label: '7 Days', value: 7 },
+  { label: '14 Days', value: 14 },
+  { label: '30 Days', value: 30 },
+]
+
 export default function Analytics() {
   const { profile } = useAuth()
-  const salonId = profile?.salons?.[0]?.id
+  const salonId = profile?.db_salon_id ?? profile?.salons?.[0]?.id
+  const [days, setDays] = useState(7)
 
-  const { data, loading } = useFetch(salonId ? `/api/analytics/salon/${salonId}/summary` : null)
-  
+  const { data, loading } = useFetch(
+    salonId ? `/api/analytics/salon/${salonId}/summary?days=${days}` : null
+  )
+
   if (!salonId && !loading) return <NoSalonEmptyState />
   if (loading) return <div className="flex justify-center py-20"><Spinner size="lg" /></div>
 
@@ -19,18 +29,15 @@ export default function Analytics() {
   const topWorkers = data?.top_workers ?? []
 
   const handleExportCSV = () => {
-    // Generate CSV string
-    let csvContent = "data:text/csv;charset=utf-8,"
-    csvContent += "Day,Customers,Revenue,WaitTime\n"
+    let csvContent = 'data:text/csv;charset=utf-8,'
+    csvContent += 'Day,Customers,Revenue,WaitTime\n'
     chartData.forEach(row => {
       csvContent += `${row.name},${row.customers},${row.revenue},${row.wait_time}\n`
     })
-    
-    // Download
     const encodedUri = encodeURI(csvContent)
-    const link = document.createElement("a")
-    link.setAttribute("href", encodedUri)
-    link.setAttribute("download", "queuecut_analytics.csv")
+    const link = document.createElement('a')
+    link.setAttribute('href', encodedUri)
+    link.setAttribute('download', `queuecut_analytics_${days}d.csv`)
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -38,11 +45,25 @@ export default function Analytics() {
 
   return (
     <div className="max-w-6xl">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex items-start justify-between mb-6 flex-wrap gap-4">
         <h1 className="text-2xl font-bold text-white">Analytics Dashboard</h1>
-        <Button size="sm" variant="secondary" onClick={handleExportCSV} className="flex items-center gap-2">
-          <Download className="w-4 h-4" /> Export CSV
-        </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Date range selector */}
+          <div className="flex bg-surface-tertiary border border-white/10 rounded-xl overflow-hidden text-xs font-medium">
+            {RANGES.map(({ label, value }) => (
+              <button
+                key={value}
+                onClick={() => setDays(value)}
+                className={`px-3 py-2 transition-colors ${
+                  days === value ? 'bg-brand-500 text-white' : 'text-dark-100 hover:text-white hover:bg-white/5'
+                }`}
+              >{label}</button>
+            ))}
+          </div>
+          <Button size="sm" variant="secondary" onClick={handleExportCSV} className="flex items-center gap-2">
+            <Download className="w-4 h-4" /> Export CSV
+          </Button>
+        </div>
       </div>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -54,10 +75,9 @@ export default function Analytics() {
 
       {/* Main Charts Row */}
       <div className="grid lg:grid-cols-2 gap-6 mb-6">
-        
         {/* Revenue Chart */}
         <Card className="p-5 h-80">
-          <h2 className="text-sm font-bold text-white mb-4">Revenue (Last 7 Days)</h2>
+          <h2 className="text-sm font-bold text-white mb-4">Revenue (Last {days} Days)</h2>
           <div aria-hidden="true" className="h-[calc(100%-2rem)]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
@@ -78,7 +98,7 @@ export default function Analytics() {
 
         {/* Customer Footfall Chart */}
         <Card className="p-5 h-80">
-          <h2 className="text-sm font-bold text-white mb-4">Customer Footfall (Last 7 Days)</h2>
+          <h2 className="text-sm font-bold text-white mb-4">Customer Footfall (Last {days} Days)</h2>
           <div aria-hidden="true" className="h-[calc(100%-2rem)]">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData}>
@@ -94,12 +114,11 @@ export default function Analytics() {
 
       {/* Top Performers Row */}
       <div className="grid lg:grid-cols-2 gap-6">
-        
         {/* Top Services */}
         <Card className="p-5">
-          <h2 className="text-sm font-bold text-white mb-4">Top Services (7 Days)</h2>
+          <h2 className="text-sm font-bold text-white mb-4">Top Services ({days} Days)</h2>
           {topServices.length === 0 ? (
-            <p className="text-dark-200 text-sm">No services completed this week.</p>
+            <p className="text-dark-200 text-sm">No services completed in this period.</p>
           ) : (
             <ul className="space-y-4">
               {topServices.map(s => (
@@ -117,9 +136,9 @@ export default function Analytics() {
 
         {/* Top Workers */}
         <Card className="p-5">
-          <h2 className="text-sm font-bold text-white mb-4">Top Barbers (7 Days)</h2>
+          <h2 className="text-sm font-bold text-white mb-4">Top Barbers ({days} Days)</h2>
           {topWorkers.length === 0 ? (
-            <p className="text-dark-200 text-sm">No barber activity this week.</p>
+            <p className="text-dark-200 text-sm">No barber activity in this period.</p>
           ) : (
             <ul className="space-y-4">
               {topWorkers.map(w => (
@@ -134,7 +153,6 @@ export default function Analytics() {
             </ul>
           )}
         </Card>
-
       </div>
     </div>
   )

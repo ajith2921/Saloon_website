@@ -65,6 +65,7 @@ class WorkerCreate(BaseModel):
     experience_years: int = Field(default=0, ge=0, le=50)
     status: Literal["active", "inactive", "on_break"] = "active"
     photo_url: Optional[str] = None
+    service_ids: Optional[list[UUID]] = []
 
     @field_validator('photo_url')
     @classmethod
@@ -83,6 +84,7 @@ class WorkerUpdate(BaseModel):
     experience_years: Optional[int] = Field(None, ge=0, le=50)
     status: Optional[Literal["active", "inactive", "on_break"]] = None
     photo_url: Optional[str] = None
+    service_ids: Optional[list[UUID]] = None
 
     @field_validator('photo_url')
     @classmethod

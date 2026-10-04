@@ -50,7 +50,7 @@ const History       = lazy(() => import('../pages/customer/History'))
 const RateBarber    = lazy(() => import('../pages/customer/RateBarber'))
 const Profile       = lazy(() => import('../pages/customer/Profile'))
 const Notifications = lazy(() => import('../pages/customer/Notifications'))
-const Loyalty       = lazy(() => import('../pages/customer/Loyalty'))
+
 const RegisterSalon = lazy(() => import('../pages/customer/RegisterSalon'))
 
 // ─── Admin pages — always lazy-loaded ────────────────────────────────────────
@@ -176,11 +176,7 @@ export default function AppRouter() {
             <Suspense fallback={<PageLoader />}><Notifications /></Suspense>
           </ProtectedRoute>
         } />
-        <Route path="/loyalty" element={
-          <ProtectedRoute roles={CUSTOMER_ROLES}>
-            <Suspense fallback={<PageLoader />}><Loyalty /></Suspense>
-          </ProtectedRoute>
-        } />
+
         <Route path="/partner" element={
           <ProtectedRoute roles={CUSTOMER_ROLES}>
             <Suspense fallback={<PageLoader />}><RegisterSalon /></Suspense>

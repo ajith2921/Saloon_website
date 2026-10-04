@@ -33,6 +33,20 @@ export default function Register() {
 
   const set = (key) => (e) => setForm({ ...form, [key]: e.target.value })
 
+  const friendlyError = (msg = '') => {
+    if (!msg) return 'Registration failed. Please try again.'
+    const m = msg.toLowerCase()
+    if (m.includes('user already registered') || m.includes('already been registered') || m.includes('email already'))
+      return 'An account with this email already exists. Try logging in instead.'
+    if (m.includes('password') && (m.includes('weak') || m.includes('short')))
+      return 'Password is too weak. Use at least 8 characters with a mix of letters and numbers.'
+    if (m.includes('invalid email') || m.includes('email is invalid'))
+      return 'Please enter a valid email address.'
+    if (m.includes('too many requests') || m.includes('rate limit'))
+      return 'Too many attempts. Please wait a few minutes and try again.'
+    return msg
+  }
+
   const validate = () => {
     const e = {}
     if (!form.fullName.trim())       e.fullName = 'Name is required'
@@ -59,7 +73,7 @@ export default function Register() {
       success('Account created!', 'Welcome to QueueCut. Please check your email to verify.')
       navigate('/login')
     } catch (err) {
-      showError(err.message || 'Registration failed. Please try again.')
+      showError(friendlyError(err.message))
     } finally {
       setLoading(false)
     }

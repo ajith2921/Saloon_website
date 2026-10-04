@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Plus, Edit2, Trash2, Scissors, Star, Key, Image } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
-import { useSalonWorkers } from '../../hooks/useApi'
+import { useSalonWorkers, useSalonServices } from '../../hooks/useApi'
 import { Modal, ConfirmModal, PageHeader, Card, Button, Input, Select, EmptyState, Skeleton } from '../../components/ui'
 import NoSalonEmptyState from '../../components/ui/NoSalonEmptyState'
 import api from '../../lib/api'
@@ -11,6 +11,7 @@ import { supabase } from '../../lib/supabase'
 const EMPTY_FORM = {
   name: '',
   specialization: '',
+  service_ids: [],
   experience_years: 0,
   status: 'active',
   photo_url: '',
@@ -23,9 +24,12 @@ const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
 export default function Workers() {
   const { profile } = useAuth()
-  const salonId = profile?.salons?.[0]?.id
+  const salonId = profile?.db_salon_id ?? profile?.salons?.[0]?.id
   const { data, loading, refetch } = useSalonWorkers(salonId)
-  const workers = data?.workers ?? []
+  const workers = data?.workers ?? data ?? [] // Handle both possible formats
+
+  const { data: servicesData } = useSalonServices(salonId)
+  const salonServices = servicesData?.services ?? servicesData ?? []
 
   const { success, error: showError } = useToast()
   
@@ -80,6 +84,7 @@ export default function Workers() {
       ? {
           name: worker.name ?? '',
           specialization: worker.specialization ?? '',
+          service_ids: worker.service_ids ?? [],
           experience_years: worker.experience_years ?? 0,
           status: worker.status ?? 'active',
           photo_url: worker.photo_url ?? '',
@@ -116,6 +121,7 @@ export default function Workers() {
         const payload = {
           name: form.name,
           specialization: form.specialization || null,
+          service_ids: form.service_ids,
           experience_years: form.experience_years,
           status: form.status,
           photo_url: form.photo_url || null,
@@ -131,6 +137,7 @@ export default function Workers() {
           salon_id: salonId,
           name: form.name,
           specialization: form.specialization || null,
+          service_ids: form.service_ids,
           experience_years: form.experience_years,
           status: form.status,
           photo_url: form.photo_url || null,
@@ -230,7 +237,9 @@ export default function Workers() {
                 </span>
               </div>
               <h3 className="text-lg font-bold text-white">{w.name}</h3>
-              <p className="text-sm text-dark-100 mb-2">{w.specialization || '—'}</p>
+              <p className="text-sm text-dark-100 mb-2">
+                {w.specialization || (w.service_ids?.length ? `${w.service_ids.length} Assigned Services` : '—')}
+              </p>
 
               <div className="flex items-center gap-4 text-xs text-dark-200 mt-auto pt-4 border-t border-white/[0.06]">
                 <div className="flex items-center gap-1">
@@ -300,15 +309,48 @@ export default function Workers() {
 
           {/* Specialization */}
           <div>
-            <label className="block text-sm font-medium text-dark-100 mb-1.5" htmlFor="worker-spec">Specialization</label>
+            <label className="block text-sm font-medium text-dark-100 mb-1.5" htmlFor="worker-spec">Specialization Title (Optional)</label>
             <Input
               id="worker-spec"
               name="specialization"
               value={form.specialization}
               onChange={handleChange}
-              placeholder="e.g. Haircut & Styling"
+              placeholder="e.g. Master Barber"
             />
           </div>
+
+          {/* Services Offered */}
+          <div>
+            <label className="block text-sm font-medium text-dark-100 mb-2">Services Offered</label>
+            <div className="flex flex-wrap gap-2">
+              {salonServices.length > 0 ? (
+                salonServices.map(service => (
+                  <button
+                    key={service.id}
+                    type="button"
+                    onClick={() => {
+                      setForm(f => ({
+                        ...f,
+                        service_ids: f.service_ids.includes(service.id)
+                          ? f.service_ids.filter(id => id !== service.id)
+                          : [...f.service_ids, service.id]
+                      }))
+                    }}
+                    className={`px-3 py-1.5 text-sm font-medium rounded-lg border transition-colors ${
+                      form.service_ids.includes(service.id)
+                        ? 'bg-brand-500/20 border-brand-500 text-brand-400'
+                        : 'bg-surface-tertiary border-white/5 text-dark-200 hover:text-white'
+                    }`}
+                  >
+                    {service.name}
+                  </button>
+                ))
+              ) : (
+                <p className="text-sm text-dark-300 italic">No services available. Please add services first.</p>
+              )}
+            </div>
+          </div>
+
 
           {/* Experience & Status */}
           <div className="grid grid-cols-2 gap-4">

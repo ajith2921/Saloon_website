@@ -69,12 +69,20 @@ async def get_workers(salon_id: UUID = Query(..., description="Filter workers by
 
     res = await (
         async_supabase_admin.table("workers")
-        .select(fields)
+        .select(f"{fields}, worker_services(service_id)")
         .eq("salon_id", salon_id)
         .order("name")
         .execute()
     )
-    return res.data
+    
+    # Map worker_services to service_ids
+    workers_list = []
+    for w in res.data:
+        w_dict = dict(w)
+        w_dict["service_ids"] = [ws["service_id"] for ws in w_dict.pop("worker_services", [])] if "worker_services" in w_dict else []
+        workers_list.append(w_dict)
+        
+    return workers_list
 
 
 @router.get("/{worker_id}")
@@ -86,13 +94,16 @@ async def get_worker(worker_id: UUID):
     async_supabase_admin = await get_async_supabase_admin()
     res = await (
         async_supabase_admin.table("workers")
-        .select(_PUBLIC_FIELDS)
+        .select(f"{_PUBLIC_FIELDS}, worker_services(service_id)")
         .eq("id", worker_id)
         .execute()
     )
     if not res.data:
         raise HTTPException(status_code=404, detail="Worker not found")
-    return res.data[0]
+        
+    w_dict = dict(res.data[0])
+    w_dict["service_ids"] = [ws["service_id"] for ws in w_dict.pop("worker_services", [])] if "worker_services" in w_dict else []
+    return w_dict
 
 
 # ── Owner-only writes ───────────────────────────────────────────────────────
@@ -141,7 +152,18 @@ async def create_worker(
     res = await async_supabase_admin.table("workers").insert(new_worker).execute()
     if not res.data:
         raise HTTPException(status_code=500, detail="Failed to create worker")
-    return res.data[0]
+        
+    created_worker = res.data[0]
+    
+    # Handle service_ids
+    if worker.service_ids:
+        ws_records = [{"worker_id": created_worker["id"], "service_id": str(sid)} for sid in worker.service_ids]
+        await async_supabase_admin.table("worker_services").insert(ws_records).execute()
+        created_worker["service_ids"] = worker.service_ids
+    else:
+        created_worker["service_ids"] = []
+        
+    return created_worker
 
 
 @router.put("/{worker_id}")
@@ -171,20 +193,28 @@ async def update_worker(
     payload = {
         k: v
         for k, v in updates.model_dump().items()
-        if v is not None and k != "user_id"
+        if v is not None and k not in ["user_id", "service_ids"]
     }
-    if not payload:
-        raise HTTPException(status_code=400, detail="No fields to update")
-
-    res = await (
-        async_supabase_admin.table("workers")
-        .update(payload)
-        .eq("id", worker_id)
-        .execute()
-    )
-    if not res.data:
-        raise HTTPException(status_code=500, detail="Failed to update worker")
-    return res.data[0]
+    
+    if payload:
+        res = await (
+            async_supabase_admin.table("workers")
+            .update(payload)
+            .eq("id", worker_id)
+            .execute()
+        )
+        if not res.data:
+            raise HTTPException(status_code=500, detail="Failed to update worker")
+            
+    # Handle service_ids
+    if updates.service_ids is not None:
+        await async_supabase_admin.table("worker_services").delete().eq("worker_id", worker_id).execute()
+        if updates.service_ids:
+            ws_records = [{"worker_id": worker_id, "service_id": str(sid)} for sid in updates.service_ids]
+            await async_supabase_admin.table("worker_services").insert(ws_records).execute()
+            
+    # Fetch final object to return
+    return await get_worker(UUID(worker_id))
 
 
 @router.post("/{worker_id}/provision")

@@ -17,7 +17,7 @@ const EMPTY_FORM = {
 
 export default function Services() {
   const { profile } = useAuth()
-  const salonId = profile?.salons?.[0]?.id
+  const salonId = profile?.db_salon_id ?? profile?.salons?.[0]?.id
   const { data, loading, refetch } = useSalonServices(salonId)
   const services = data?.services ?? []
 
@@ -137,7 +137,8 @@ export default function Services() {
         />
       ) : (
         <Card className="p-0 overflow-hidden">
-          <table className="w-full text-left text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm min-w-[560px]">
             <caption className="sr-only">Services menu — {services.length} service{services.length !== 1 ? 's' : ''}</caption>
             <thead>
               <tr className="bg-surface-tertiary text-dark-200 border-b border-white/[0.06]">
@@ -191,6 +192,7 @@ export default function Services() {
               ))}
             </tbody>
           </table>
+          </div>
         </Card>
       )}
 
