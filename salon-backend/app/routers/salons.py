@@ -14,11 +14,11 @@ from ..dependencies import get_current_user_with_profile, require_salon_access, 
 # Used by public routes that grant extra data when authenticated.
 optional_bearer = HTTPBearer(auto_error=False)
 
-def get_current_user_with_profile_from_credentials(credentials: HTTPAuthorizationCredentials) -> dict:
+async def get_current_user_with_profile_from_credentials(credentials: HTTPAuthorizationCredentials) -> dict:
     """Helper to resolve profile from explicit credentials (used where auth is optional)."""
     from ..dependencies import get_current_user, get_current_user_with_profile as _gwp
-    user = get_current_user(credentials)
-    return _gwp(user)
+    user = await get_current_user(credentials)
+    return await _gwp(user)
 
 # Reuse the same private-IP validation pattern from schemas
 _PRIVATE_IP_RE = re.compile(
@@ -56,7 +56,7 @@ router = APIRouter(prefix="/api/salons", tags=["Salons"])
 
 @router.get("")
 @limiter.limit("60/minute")
-async def get_salons(request: Request, status: Optional[str] = Query(None), limit: Optional[int] = Query(50, le=100), offset: Optional[int] = Query(0)):
+async def get_salons(request: Request, status: Optional[str] = Query(None), limit: int = Query(50, le=100), offset: int = Query(0)):
     # Public discovery must never expose pending or suspended salons.
     async_supabase_admin = await get_async_supabase_admin()
     query = async_supabase_admin.table("salons").select("*").eq("status", "active")
@@ -187,7 +187,7 @@ async def get_salon_by_id(salon_id: UUID, credentials: HTTPAuthorizationCredenti
     caller_salon_id = None
     if credentials:
         try:
-            user = get_current_user_with_profile_from_credentials(credentials)
+            user = await get_current_user_with_profile_from_credentials(credentials)
             caller_role = user.get("db_role")
             caller_salon_id = user.get("db_salon_id")
         except Exception:

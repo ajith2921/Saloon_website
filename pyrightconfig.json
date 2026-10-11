@@ -1,0 +1,10 @@
+{
+  "include": [
+    "salon-backend"
+  ],
+  "extraPaths": [
+    "salon-backend",
+    "salon-backend/venv/Lib/site-packages"
+  ],
+  "typeCheckingMode": "basic"
+}
