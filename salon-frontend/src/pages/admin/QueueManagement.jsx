@@ -41,7 +41,12 @@ export default function QueueManagement() {
         const smsStatus = res.data?.sms_status
         const smsPhone = res.data?.sms_phone || tokenData?.guest_phone || tokenData?.profiles?.phone
 
-        if (smsStatus === 'no_phone' || (!smsPhone && smsStatus !== 'sent')) {
+        if (smsStatus === 'opted_out') {
+          showWarning(
+            `${tokenNumber} called! Notice: Customer has disabled SMS notifications in their profile settings.`,
+            'Called (SMS Opted Out)'
+          )
+        } else if (smsStatus === 'no_phone' || (!smsPhone && smsStatus !== 'sent')) {
           showWarning(
             `${tokenNumber} called! Notice: Customer did not provide a phone number, so no SMS notification could be sent. Please call customer in person.`,
             'Called (No Phone Number)'

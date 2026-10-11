@@ -92,28 +92,47 @@ export function AuthProvider({ children }) {
     setProfile(null)
   }
 
-  const PROFILE_UPDATE_ALLOWLIST = ['full_name', 'phone', 'avatar_url']
+  const PROFILE_UPDATE_ALLOWLIST = ['full_name', 'phone', 'avatar_url', 'sms_notifications', 'email_receipts']
 
   const updateProfile = async (updates) => {
     if (!user) throw new Error('Not authenticated')
     // Allowlist: only permit safe user-editable fields. Role, loyalty_points,
     // referral_code, and all other sensitive fields are stripped here (and also
-    // enforced by the database trigger in migration 014).
+    // enforced by the database trigger in migration 014/018).
     const safeUpdates = Object.fromEntries(
       Object.entries(updates).filter(([key]) => PROFILE_UPDATE_ALLOWLIST.includes(key))
     )
     if (Object.keys(safeUpdates).length === 0) {
       throw new Error('No valid fields to update')
     }
-    const { data, error } = await supabase
-      .from('profiles')
-      .update(safeUpdates)
-      .eq('id', user.id)
-      .select()
-      .single()
-    if (error) throw error
-    setProfile(data)
-    return data
+
+    let updatedData = null
+
+    // Strategy 1: Preferred backend API with service-role privileges
+    // Prevents client-side PostgreSQL 42501 permission denied errors when table grants/RLS are strict
+    try {
+      const res = await api.put('/api/users/profile', safeUpdates)
+      if (res.data?.profile) {
+        updatedData = res.data.profile
+      }
+    } catch (apiErr) {
+      console.warn('[Profile] Backend API update error, falling back to direct Supabase:', apiErr)
+    }
+
+    // Strategy 2: Fallback to direct Supabase update if backend API was unavailable
+    if (!updatedData) {
+      const { data, error } = await supabase
+        .from('profiles')
+        .update(safeUpdates)
+        .eq('id', user.id)
+        .select()
+        .single()
+      if (error) throw error
+      updatedData = data
+    }
+
+    setProfile(p => ({ ...p, ...updatedData }))
+    return updatedData
   }
 
   const refreshProfile = () => fetchProfile(user?.id)

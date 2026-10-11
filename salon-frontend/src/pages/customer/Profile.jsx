@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { User, Phone, Mail, Save, Gift, Copy } from 'lucide-react'
@@ -13,6 +13,17 @@ export default function Profile() {
     email_receipts: profile?.email_receipts ?? false,
   })
   const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (profile) {
+      setForm({
+        full_name: profile.full_name ?? '',
+        phone:     profile.phone ?? '',
+        sms_notifications: profile.sms_notifications ?? false,
+        email_receipts: profile.email_receipts ?? false,
+      })
+    }
+  }, [profile])
 
   const handleSave = async () => {
     setSaving(true)

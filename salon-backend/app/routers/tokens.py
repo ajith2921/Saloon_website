@@ -234,18 +234,27 @@ async def update_token_status(request: Request, token_id: UUID, action: str, bac
         first_name = (t.get("guest_name") or "Customer").split(" ")[0]
         
         # If it's a registered customer and we don't have guest_phone, fetch from profiles safely
-        if not phone_number and t.get("customer_id"):
+        sms_opt_in = True
+        if t.get("customer_id"):
             try:
-                profile_res = await async_supabase_admin.table("profiles").select("phone, full_name").eq("id", t["customer_id"]).execute()
+                profile_res = await async_supabase_admin.table("profiles").select("*").eq("id", t["customer_id"]).execute()
                 if profile_res.data:
-                    phone_number = profile_res.data[0].get("phone")
-                    full_name = profile_res.data[0].get("full_name")
+                    prof = profile_res.data[0]
+                    if not phone_number:
+                        phone_number = prof.get("phone")
+                    full_name = prof.get("full_name")
                     if full_name:
                         first_name = full_name.split(" ")[0]
+                    if prof.get("sms_notifications") is False:
+                        sms_opt_in = False
             except Exception as e:
                 logger.warning(f"Could not read profile for customer {t.get('customer_id')}: {e}")
         
-        if phone_number and str(phone_number).strip():
+        if not sms_opt_in:
+            sms_status = "opted_out"
+            sms_phone = phone_number
+            sms_message = "Customer has disabled SMS notifications in their profile settings. No SMS was sent."
+        elif phone_number and str(phone_number).strip():
             phone_number = str(phone_number).strip()
             sms_status = "sent"
             sms_phone = phone_number
