@@ -117,9 +117,9 @@ export default function AdminLayout() {
       </div>
 
       {/* Main */}
-      <div className="flex-1 flex flex-col min-w-0 pb-16 md:pb-0">
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
-        <header className="h-16 flex items-center justify-between px-4 sm:px-6 border-b border-white/[0.06] bg-surface-primary/90 backdrop-blur sticky top-0 z-10">
+        <header className="h-14 sm:h-16 flex items-center justify-between px-3.5 sm:px-6 border-b border-white/[0.06] bg-surface-primary/95 backdrop-blur-md sticky top-0 z-20">
           <div className="flex items-center gap-3">
             <button
               className="md:hidden p-2 -ml-2 text-dark-200 hover:text-white transition-colors"
@@ -144,7 +144,7 @@ export default function AdminLayout() {
         </header>
 
         {/* Page content */}
-        <main id="admin-main-content" className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 scrollbar-thin">
+        <main id="admin-main-content" className="flex-1 overflow-y-auto overflow-x-hidden p-3.5 sm:p-6 pb-28 sm:pb-8 scrollbar-thin">
           <Outlet />
         </main>
       </div>
