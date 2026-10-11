@@ -12,7 +12,7 @@ export default function WorkerDashboard() {
   const salonId = profile?.db_salon_id ?? profile?.salons?.[0]?.id
   // Fetch real-time queue in admin mode
   const { tokens, loading, refetch } = useRealtimeQueue(salonId, undefined, true)
-  const { success, error: showError } = useToast()
+  const { success, error: showError, warning: showWarning } = useToast()
   
   const [workerProfile, setWorkerProfile] = useState(null)
   const [loadingWorker, setLoadingWorker] = useState(true)
@@ -32,11 +32,37 @@ export default function WorkerDashboard() {
     fetchWorker()
   }, [])
 
-  const updateStatus = async (tokenId, action) => {
+  const updateStatus = async (tokenId, action, tokenData = null) => {
     setActionLoading(tokenId)
     try {
-      await api.put(`/api/tokens/${tokenId}/${action}`)
-      success(`Token ${action} successfully`)
+      const res = await api.put(`/api/tokens/${tokenId}/${action}`)
+      const tokenNumber = tokenData?.token_number ? `#${tokenData.token_number}` : 'Token'
+
+      if (action === 'call') {
+        const smsStatus = res.data?.sms_status
+        const smsPhone = res.data?.sms_phone || tokenData?.guest_phone || tokenData?.profiles?.phone
+
+        if (smsStatus === 'no_phone' || (!smsPhone && smsStatus !== 'sent')) {
+          showWarning(
+            `${tokenNumber} called! Notice: Customer did not provide a phone number, so no SMS notification could be sent. Please call customer in person.`,
+            'Called (No Phone Number)'
+          )
+        } else if (smsStatus === 'sent' || smsPhone) {
+          success(
+            `${tokenNumber} called! SMS notification sent${smsPhone ? ` to ${smsPhone}` : ''}.`,
+            'Customer Called'
+          )
+        } else {
+          success(`${tokenNumber} called successfully.`, 'Token Called')
+        }
+      } else {
+        const actionLabels = {
+          start: 'started',
+          complete: 'completed',
+          skip: 'skipped',
+        }
+        success(`${tokenNumber} ${actionLabels[action] || action} successfully`)
+      }
     } catch (err) {
       showError(err.message || `Failed to ${action} token`)
     } finally {
@@ -166,7 +192,7 @@ export default function WorkerDashboard() {
                       size="sm"
                       variant={token.status === 'called' ? 'primary' : 'outline'}
                       loading={actionLoading === token.id}
-                      onClick={() => updateStatus(token.id, token.status === 'called' ? 'serve' : 'call')}
+                      onClick={() => updateStatus(token.id, token.status === 'called' ? 'start' : 'call', token)}
                     >
                       {token.status === 'called' ? (
                         <><Play className="w-4 h-4 mr-2" /> Serve</>

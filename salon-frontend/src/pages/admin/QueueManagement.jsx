@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Play, Check, SkipForward, RefreshCw, Volume2, UserPlus, UserCog, X } from 'lucide-react'
+import { Play, Check, SkipForward, RefreshCw, Volume2, UserPlus, UserCog, X, Phone, PhoneOff } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '../../context/AuthContext'
 import { useRealtimeQueue } from '../../hooks/useRealtime'
@@ -13,9 +13,9 @@ export default function QueueManagement() {
   const { profile } = useAuth()
   // db_salon_id is set by the backend profile resolution and is authoritative
   const salonId = profile?.db_salon_id ?? profile?.salons?.[0]?.id
-  // adminMode=true → uses /queue/admin (authenticated) which includes profiles(full_name)
+  // adminMode=true → uses /queue/admin (authenticated) which includes profiles(full_name, phone)
   const { tokens, activeTokens, waitingTokens, bookingTokens, loading, refetch } = useRealtimeQueue(salonId, undefined, true)
-  const { success, error: showError } = useToast()
+  const { success, error: showError, warning: showWarning } = useToast()
   const [actionLoading, setActionLoading] = useState(null)
 
   const { data: servicesData } = useSalonServices(salonId)
@@ -31,11 +31,39 @@ export default function QueueManagement() {
   const [walkInForm, setWalkInForm] = useState({ guest_name: '', guest_phone: '', service_id: '', worker_id: '' })
   const [reassignWorkerId, setReassignWorkerId] = useState('')
 
-  const updateStatus = async (tokenId, action) => {
+  const updateStatus = async (tokenId, action, tokenData = null) => {
     setActionLoading(tokenId)
     try {
-      await api.put(`/api/tokens/${tokenId}/${action}`)
-      success(`Token ${action} successfully`)
+      const res = await api.put(`/api/tokens/${tokenId}/${action}`)
+      const tokenNumber = tokenData?.token_number ? `#${tokenData.token_number}` : 'Token'
+
+      if (action === 'call') {
+        const smsStatus = res.data?.sms_status
+        const smsPhone = res.data?.sms_phone || tokenData?.guest_phone || tokenData?.profiles?.phone
+
+        if (smsStatus === 'no_phone' || (!smsPhone && smsStatus !== 'sent')) {
+          showWarning(
+            `${tokenNumber} called! Notice: Customer did not provide a phone number, so no SMS notification could be sent. Please call customer in person.`,
+            'Called (No Phone Number)'
+          )
+        } else if (smsStatus === 'sent' || smsPhone) {
+          success(
+            `${tokenNumber} called! SMS notification sent${smsPhone ? ` to ${smsPhone}` : ''}.`,
+            'Customer Called'
+          )
+        } else {
+          success(`${tokenNumber} called successfully.`, 'Token Called')
+        }
+      } else {
+        const actionLabels = {
+          start: 'started',
+          complete: 'completed',
+          skip: 'skipped',
+          cancel: 'cancelled',
+          recall: 'recalled',
+        }
+        success(`${tokenNumber} ${actionLabels[action] || action} successfully`)
+      }
     } catch (err) {
       showError(err.message || `Failed to ${action} token`)
     } finally {
@@ -129,12 +157,23 @@ export default function QueueManagement() {
                   <p className="text-base sm:text-lg font-bold text-white">
                     {waitingTokens[0].guest_name || waitingTokens[0].profiles?.full_name || 'Walk-in Customer'}
                   </p>
-                  <p className="text-xs text-dark-100 mt-0.5 mb-4">
+                  <p className="text-xs text-dark-100 mt-0.5 mb-2">
                     {waitingTokens[0].services?.name} · {waitingTokens[0].services?.duration_minutes}m · Assigned to <span className="text-white font-medium">{waitingTokens[0].workers?.name ?? 'Any Barber'}</span>
                   </p>
+                  <div className="mb-4 flex items-center justify-center">
+                    {(waitingTokens[0].guest_phone || waitingTokens[0].profiles?.phone) ? (
+                      <span className="inline-flex items-center gap-1.5 text-xs text-brand-400 bg-brand-500/10 px-2.5 py-1 rounded-full border border-brand-500/20">
+                        <Phone className="w-3 h-3" /> {waitingTokens[0].guest_phone || waitingTokens[0].profiles?.phone} (SMS enabled)
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 text-xs text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
+                        <PhoneOff className="w-3 h-3" /> No phone number (In-person call)
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center justify-center gap-2 max-w-xs mx-auto">
                     <Button
-                      onClick={() => updateStatus(waitingTokens[0].id, 'call')}
+                      onClick={() => updateStatus(waitingTokens[0].id, 'call', waitingTokens[0])}
                       loading={actionLoading === waitingTokens[0].id}
                       className="flex-1 py-2 text-xs sm:text-sm"
                       aria-label={`Call token ${waitingTokens[0].token_number}`}
@@ -143,7 +182,7 @@ export default function QueueManagement() {
                     </Button>
                     <Button
                       variant="ghost"
-                      onClick={() => updateStatus(waitingTokens[0].id, 'skip')}
+                      onClick={() => updateStatus(waitingTokens[0].id, 'skip', waitingTokens[0])}
                       loading={actionLoading === waitingTokens[0].id}
                       className="text-xs sm:text-sm !text-dark-200 hover:!text-purple-400"
                       aria-label={`Skip token ${waitingTokens[0].token_number}`}
@@ -186,6 +225,15 @@ export default function QueueManagement() {
                       <div className="flex-1 min-w-0 text-center sm:text-left w-full">
                         <p className="font-semibold text-base sm:text-lg text-white truncate">{t.guest_name || t.profiles?.full_name || 'Walk-in Customer'}</p>
                         <p className="text-xs sm:text-sm text-dark-100 mt-0.5">{t.services?.name} · {t.services?.duration_minutes}m</p>
+                        {(t.guest_phone || t.profiles?.phone) ? (
+                          <p className="text-xs text-brand-400 flex items-center justify-center sm:justify-start gap-1 mt-1 truncate">
+                            <Phone className="w-3 h-3 shrink-0" /> {t.guest_phone || t.profiles?.phone}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-amber-400/90 flex items-center justify-center sm:justify-start gap-1 mt-1">
+                            <PhoneOff className="w-3 h-3 shrink-0" /> No phone provided
+                          </p>
+                        )}
                         <div className="text-xs text-dark-200 mt-2 flex flex-wrap items-center justify-center sm:justify-start gap-2">
                           <span>Assigned to: <span className="text-white font-medium">{t.workers?.name ?? 'Any'}</span></span>
                           {(t.status === 'waiting' || t.status === 'called') && (
@@ -202,7 +250,7 @@ export default function QueueManagement() {
                       <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-32 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/[0.06]">
                         {t.status === 'called' && (
                           <Button
-                            onClick={() => updateStatus(t.id, 'start')}
+                            onClick={() => updateStatus(t.id, 'start', t)}
                             loading={actionLoading === t.id}
                             className="flex-1 sm:w-full py-2 text-xs sm:text-sm"
                             aria-label={`Start serving token ${t.token_number}`}
@@ -213,7 +261,7 @@ export default function QueueManagement() {
                         {t.status === 'serving' && (
                           <Button
                             variant="secondary"
-                            onClick={() => updateStatus(t.id, 'complete')}
+                            onClick={() => updateStatus(t.id, 'complete', t)}
                             loading={actionLoading === t.id}
                             className="flex-1 sm:w-full py-2 text-xs sm:text-sm !border-green-500/40 !text-green-400 hover:!bg-green-500/10"
                             aria-label={`Complete token ${t.token_number}`}
@@ -223,7 +271,7 @@ export default function QueueManagement() {
                         )}
                         <Button
                           variant="ghost"
-                          onClick={() => updateStatus(t.id, 'skip')}
+                          onClick={() => updateStatus(t.id, 'skip', t)}
                           loading={actionLoading === t.id}
                           className="flex-1 sm:w-full py-2 text-xs sm:text-sm !text-dark-200 hover:!text-purple-400"
                           aria-label={`Skip token ${t.token_number}`}
@@ -246,7 +294,7 @@ export default function QueueManagement() {
               <h2 className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider">Waiting ({waitingTokens.length})</h2>
               {waitingTokens.length > 0 && (
                 <Button 
-                  onClick={() => updateStatus(waitingTokens[0].id, 'call')}
+                  onClick={() => updateStatus(waitingTokens[0].id, 'call', waitingTokens[0])}
                   loading={actionLoading === waitingTokens[0].id}
                   className="py-1 px-2.5 text-xs h-auto"
                   aria-label={`Call next token: ${waitingTokens[0].token_number}`}
@@ -279,11 +327,20 @@ export default function QueueManagement() {
                       <div className="flex-1 min-w-0">
                         <p className="text-xs sm:text-sm font-medium text-white truncate">{t.guest_name || t.profiles?.full_name || 'Walk-in'}</p>
                         <p className="text-[11px] text-dark-200 truncate">{t.services?.name}</p>
+                        {(t.guest_phone || t.profiles?.phone) ? (
+                          <p className="text-[10px] text-brand-300 flex items-center gap-1 mt-0.5 truncate">
+                            <Phone className="w-2.5 h-2.5 shrink-0" /> {t.guest_phone || t.profiles?.phone}
+                          </p>
+                        ) : (
+                          <p className="text-[10px] text-amber-400/80 flex items-center gap-1 mt-0.5">
+                            <PhoneOff className="w-2.5 h-2.5 shrink-0" /> No phone
+                          </p>
+                        )}
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         <Button 
                           variant="secondary"
-                          onClick={() => updateStatus(t.id, 'call')}
+                          onClick={() => updateStatus(t.id, 'call', t)}
                           loading={actionLoading === t.id}
                           disabled={actionLoading !== null}
                           className="px-2.5 py-1 text-xs h-auto"
@@ -293,7 +350,7 @@ export default function QueueManagement() {
                         </Button>
                         <Button 
                           variant="ghost"
-                          onClick={() => updateStatus(t.id, 'cancel')}
+                          onClick={() => updateStatus(t.id, 'cancel', t)}
                           loading={actionLoading === t.id}
                           disabled={actionLoading !== null}
                           className="p-1 text-xs h-auto !text-red-400 hover:!bg-red-500/10"
@@ -334,7 +391,7 @@ export default function QueueManagement() {
                         <div className="flex items-center gap-1 shrink-0">
                           <Button 
                             variant="secondary"
-                            onClick={() => updateStatus(t.id, 'call')}
+                            onClick={() => updateStatus(t.id, 'call', t)}
                             loading={actionLoading === t.id}
                             disabled={actionLoading !== null}
                             className="px-2.5 py-1 text-xs h-auto"

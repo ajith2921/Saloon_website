@@ -1,6 +1,7 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status, Request, BackgroundTasks
 from datetime import date, datetime, timezone
+import logging
 
 # pyrefly: ignore [missing-import]
 from ..schemas.schemas import TokenCreate, TokenReassign
@@ -11,6 +12,8 @@ from ..database import supabase_admin, get_async_supabase_admin
 from ..limiter import limiter
 from ..services.sms import send_sms_notification
 from ..services.push import send_push_notification
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/tokens", tags=["Tokens"])
 
@@ -220,27 +223,51 @@ async def update_token_status(request: Request, token_id: UUID, action: str, bac
     updated_token = res.data[0]
 
     # Trigger SMS notification if action is call
+    sms_status = None
+    sms_phone = None
+    sms_message = None
+
     if action == "call":
         salon_name = t.get("salons", {}).get("name", "the salon")
         
         phone_number = t.get("guest_phone")
-        first_name = t.get("guest_name", "Customer").split(" ")[0]
+        first_name = (t.get("guest_name") or "Customer").split(" ")[0]
         
-        # If it's a registered customer and we don't have guest_phone, fetch from profiles
+        # If it's a registered customer and we don't have guest_phone, fetch from profiles safely
         if not phone_number and t.get("customer_id"):
-            profile_res = await async_supabase_admin.table("profiles").select("phone, full_name").eq("id", t["customer_id"]).execute()
-            if profile_res.data:
-                phone_number = profile_res.data[0].get("phone")
-                first_name = profile_res.data[0].get("full_name", "Customer").split(" ")[0]
+            try:
+                profile_res = await async_supabase_admin.table("profiles").select("phone, full_name").eq("id", t["customer_id"]).execute()
+                if profile_res.data:
+                    phone_number = profile_res.data[0].get("phone")
+                    full_name = profile_res.data[0].get("full_name")
+                    if full_name:
+                        first_name = full_name.split(" ")[0]
+            except Exception as e:
+                logger.warning(f"Could not read profile for customer {t.get('customer_id')}: {e}")
         
-        if phone_number:
+        if phone_number and str(phone_number).strip():
+            phone_number = str(phone_number).strip()
+            sms_status = "sent"
+            sms_phone = phone_number
+            sms_message = f"SMS notification queued for {phone_number}"
             message = f"Hi {first_name}, it's your turn at {salon_name}! Please head to the counter."
             background_tasks.add_task(send_sms_notification, phone_number, message)
-        
+        else:
+            sms_status = "no_phone"
+            sms_phone = None
+            sms_message = "Customer has not provided a phone number. No SMS notification was sent."
+
         if t.get("customer_id"):
-            push_title = "It's your turn!"
-            push_body = f"Please head to the counter at {salon_name}."
-            background_tasks.add_task(send_push_notification, t["customer_id"], push_title, push_body, f"/my-token")
+            try:
+                push_title = "It's your turn!"
+                push_body = f"Please head to the counter at {salon_name}."
+                background_tasks.add_task(send_push_notification, t["customer_id"], push_title, push_body, f"/my-token")
+            except Exception as e:
+                logger.warning(f"Could not queue push notification: {e}")
+
+    updated_token["sms_status"] = sms_status
+    updated_token["sms_phone"] = sms_phone
+    updated_token["sms_message"] = sms_message
 
     return updated_token
 

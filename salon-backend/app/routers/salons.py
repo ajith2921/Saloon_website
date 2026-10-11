@@ -118,7 +118,7 @@ async def get_admin_live_queue(
     res = await async_supabase_admin.table("tokens").select(
         "id, token_number, status, service_id, worker_id, "
         "services(name, duration_minutes), workers(name, photo_url), "
-        "profiles!customer_id(full_name), guest_name, guest_phone, is_booking, scheduled_for"
+        "profiles!customer_id(full_name, phone), guest_name, guest_phone, is_booking, scheduled_for"
     ).eq("salon_id", salon_id).eq("date", today).order("token_number").execute()
     return {"tokens": res.data}
 
