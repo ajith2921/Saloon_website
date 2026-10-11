@@ -277,7 +277,7 @@ export default function Services() {
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-3 pb-1 sticky bottom-0 bg-surface-secondary/95 backdrop-blur-md mt-2 border-t border-white/[0.08] z-10">
             <Button
               type="button"
               variant="ghost"

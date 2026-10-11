@@ -180,29 +180,35 @@ export function Modal({ open, onClose, title, children, size = 'md', titleId }) 
   const widths = { sm: 'max-w-sm', md: 'max-w-md', lg: 'max-w-2xl', xl: 'max-w-4xl' }
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
       role="dialog"
       aria-modal="true"
       aria-labelledby={title ? titleIdResolved : undefined}
       onKeyDown={handleKeyDown}
     >
       {/* Backdrop — click closes the modal */}
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
+      <div className="fixed inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} aria-hidden="true" />
       {/* Panel — tabIndex={-1} receives programmatic focus */}
       <div
         ref={dialogRef}
         tabIndex={-1}
-        className={clsx('relative w-full card p-6 animate-slide-up focus:outline-none', widths[size])}
+        className={clsx(
+          'relative w-full card p-5 sm:p-6 animate-slide-up focus:outline-none flex flex-col',
+          'max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100vh-3.5rem)] my-auto shadow-2xl',
+          widths[size]
+        )}
       >
         {title && (
-          <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/[0.08] shrink-0">
             <h2 id={titleIdResolved} className="text-lg font-bold text-white">{title}</h2>
-            <Button variant="ghost" onClick={onClose} className="!p-1" aria-label="Close modal">
+            <Button variant="ghost" onClick={onClose} className="!p-1.5 text-dark-200 hover:text-white rounded-lg" aria-label="Close modal">
               <span aria-hidden="true" className="text-xl leading-none">×</span>
             </Button>
           </div>
         )}
-        {children}
+        <div className="overflow-y-auto overflow-x-hidden flex-1 -mr-1 pr-1 scrollbar-thin">
+          {children}
+        </div>
       </div>
     </div>
   )
@@ -252,18 +258,18 @@ export function ConfirmModal({ open, onConfirm, onCancel, title = 'Are you sure?
   if (!open) return null
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 z-[110] flex items-center justify-center p-4 overflow-y-auto"
       role="alertdialog"
       aria-modal="true"
       aria-labelledby="confirm-modal-title"
       aria-describedby={message ? 'confirm-modal-desc' : undefined}
       onKeyDown={handleKeyDown}
     >
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onCancel} aria-hidden="true" />
+      <div className="fixed inset-0 bg-black/80 backdrop-blur-sm" onClick={onCancel} aria-hidden="true" />
       <div
         ref={dialogRef}
         tabIndex={-1}
-        className="relative w-full max-w-sm card p-6 animate-slide-up focus:outline-none"
+        className="relative w-full max-w-sm card p-6 animate-slide-up focus:outline-none max-h-[calc(100dvh-2rem)] overflow-y-auto shadow-2xl my-auto"
       >
         <h2 id="confirm-modal-title" className="text-lg font-bold text-white mb-2">{title}</h2>
         {message && <p id="confirm-modal-desc" className="text-dark-100 text-sm mb-6 leading-relaxed">{message}</p>}
