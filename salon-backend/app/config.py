@@ -39,9 +39,15 @@ class Settings(BaseSettings):
         
         if "https://saloon-website-ashen.vercel.app" not in origins:
             origins.append("https://saloon-website-ashen.vercel.app")
-        # Also allow local dev
-        if "http://localhost:5173" not in origins:
-            origins.append("http://localhost:5173")
+        # Also allow local dev origins
+        for dev_origin in [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "http://localhost:5180",
+            "http://127.0.0.1:5180",
+        ]:
+            if dev_origin not in origins:
+                origins.append(dev_origin)
             
         return origins
 
