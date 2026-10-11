@@ -43,18 +43,18 @@ export default function Profile() {
   }
 
   return (
-    <div className="container-app max-w-lg mx-auto py-8">
-      <h1 className="text-2xl font-bold text-white mb-6">My Profile</h1>
+    <div className="container-app max-w-lg mx-auto py-4 sm:py-8 pb-32 sm:pb-8">
+      <h1 className="text-xl sm:text-2xl font-bold text-white mb-4 sm:mb-6">My Profile</h1>
 
       <div className="flex flex-col gap-4">
         {/* Avatar */}
-        <Card className="flex items-center gap-4 p-5">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-brand flex items-center justify-center text-2xl font-bold text-white shadow-glow-sm">
+        <Card className="flex items-center gap-4 p-4 sm:p-5">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-brand flex items-center justify-center text-xl sm:text-2xl font-bold text-white shadow-glow-sm shrink-0">
             {profile?.full_name?.[0]?.toUpperCase() ?? 'U'}
           </div>
-          <div>
-            <p className="font-bold text-white">{profile?.full_name}</p>
-            <p className="text-dark-200 text-sm">{user?.email}</p>
+          <div className="min-w-0">
+            <p className="font-bold text-white truncate">{profile?.full_name}</p>
+            <p className="text-dark-200 text-xs sm:text-sm truncate">{user?.email}</p>
             <span className="inline-block mt-1 text-[10px] uppercase tracking-wider font-semibold text-brand-400 bg-brand-500/10 px-2 py-0.5 rounded-full">
               {profile?.role?.replace('_', ' ')}
             </span>
@@ -62,8 +62,8 @@ export default function Profile() {
         </Card>
 
         {/* Edit form */}
-        <Card className="p-5">
-          <h2 className="text-base font-bold text-white mb-4">Personal Information</h2>
+        <Card className="p-4 sm:p-5">
+          <h2 className="text-sm sm:text-base font-bold text-white mb-4">Personal Information</h2>
           <div className="flex flex-col gap-4">
             <Input
               type="text"
@@ -88,10 +88,10 @@ export default function Profile() {
               className="opacity-50 cursor-not-allowed"
             />
             
-            <div className="flex items-center justify-between p-4 mt-2 bg-surface-secondary border border-white/10 rounded-2xl">
-              <div>
+            <div className="flex items-center justify-between p-3.5 sm:p-4 mt-2 bg-surface-secondary border border-white/10 rounded-2xl gap-3">
+              <div className="flex-1 min-w-0 pr-2">
                 <p className="font-bold text-white text-sm">SMS Notifications</p>
-                <p className="text-xs text-dark-200 mt-0.5 max-w-[200px]">Get texted when you are next in line. Standard rates may apply.</p>
+                <p className="text-xs text-dark-200 mt-0.5 leading-relaxed">Get texted when you are next in line. Standard rates may apply.</p>
               </div>
               <button
                 type="button"
@@ -111,10 +111,10 @@ export default function Profile() {
               </button>
             </div>
 
-            <div className="flex items-center justify-between p-4 bg-surface-secondary border border-white/10 rounded-2xl">
-              <div>
+            <div className="flex items-center justify-between p-3.5 sm:p-4 bg-surface-secondary border border-white/10 rounded-2xl gap-3">
+              <div className="flex-1 min-w-0 pr-2">
                 <p className="font-bold text-white text-sm">Email Receipts</p>
-                <p className="text-xs text-dark-200 mt-0.5 max-w-[200px]">Automatically receive a receipt when a token completes.</p>
+                <p className="text-xs text-dark-200 mt-0.5 leading-relaxed">Automatically receive a receipt when a token completes.</p>
               </div>
               <button
                 type="button"
@@ -134,7 +134,7 @@ export default function Profile() {
               </button>
             </div>
 
-            <Button onClick={handleSave} loading={saving} fullWidth className="mt-2">
+            <Button onClick={handleSave} loading={saving} fullWidth className="mt-2 py-3">
               <Save className="w-4 h-4 mr-2" /> Save Changes
             </Button>
           </div>

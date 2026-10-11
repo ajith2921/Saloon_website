@@ -14,13 +14,13 @@ export default function LiveQueue() {
   const calledTokens  = tokens.filter((t) => t.status === 'called')
 
   return (
-    <div className="container-app max-w-2xl mx-auto py-8">
-      <div className="flex items-center justify-between mb-8">
+    <div className="container-app max-w-2xl mx-auto py-4 sm:py-8 pb-32 sm:pb-8">
+      <div className="flex items-center justify-between mb-6 sm:mb-8">
         <div>
-          <h1 className="text-3xl font-display font-bold text-white leading-tight">Live Queue</h1>
-          <p className="text-dark-100 text-sm mt-1">{salon?.name}</p>
+          <h1 className="text-2xl sm:text-3xl font-display font-bold text-white leading-tight">Live Queue</h1>
+          <p className="text-dark-100 text-xs sm:text-sm mt-0.5">{salon?.name}</p>
         </div>
-        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-success/10 border border-success/20">
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-success/10 border border-success/20 shrink-0">
           <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
           <span className="text-xs font-bold text-success uppercase tracking-widest">Live</span>
         </div>
@@ -31,7 +31,7 @@ export default function LiveQueue() {
       ) : (
         <>
           {/* Currently Serving */}
-          <div className="card p-6 mb-6 border-2 border-brand-500/20 bg-gradient-card shadow-glow-sm relative overflow-hidden">
+          <div className="card p-4 sm:p-6 mb-5 sm:mb-6 border-2 border-brand-500/20 bg-gradient-card shadow-glow-sm relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-radial from-brand-500/10 to-transparent pointer-events-none" />
             <p className="text-[10px] font-semibold text-dark-200 uppercase tracking-widest mb-4 relative z-10">Now Serving</p>
             {servingTokens.length === 0 && calledTokens.length === 0 ? (

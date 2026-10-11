@@ -157,7 +157,7 @@ export default function FindSalons() {
   }, [allSalons, search, sortBy, onlyOpen])
 
   return (
-    <div className="container-app py-8">
+    <div className="container-app py-4 sm:py-8 pb-32 sm:pb-8">
       <PageHeader 
         title={t('findSalons.title', 'Find Your Salon')}
         subtitle={allSalons.length > 0
@@ -166,8 +166,8 @@ export default function FindSalons() {
       />
 
       {/* Search + Filters */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
-        <div className="relative flex-1">
+      <div className="flex flex-col gap-2.5 mb-6">
+        <div className="relative w-full">
           <Input
             id="salon-search"
             type="text"
@@ -180,7 +180,7 @@ export default function FindSalons() {
           {search && (
             <button 
               onClick={() => setSearch('')} 
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-200 hover:text-white z-10"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-dark-200 hover:text-white z-10 p-1"
               aria-label="Clear search"
             >
               <X className="w-4 h-4" />
@@ -188,38 +188,40 @@ export default function FindSalons() {
           )}
         </div>
 
-        {/* Sort */}
-        <Select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-          wrapperClassName="w-full sm:w-auto min-w-[160px]"
-        >
-          {SORT_OPTIONS(t).map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-        </Select>
+        <div className="grid grid-cols-2 sm:flex sm:items-center gap-2">
+          {/* Sort */}
+          <Select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            wrapperClassName="w-full sm:w-auto min-w-[140px]"
+          >
+            {SORT_OPTIONS(t).map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </Select>
 
-        <Button
-          variant="secondary"
-          onClick={() => setOnlyOpen(!onlyOpen)}
-          className={`whitespace-nowrap ${onlyOpen ? 'border-brand-500/40 text-brand-400' : ''}`}
-        >
-          <SlidersHorizontal className="w-4 h-4" />
-          {onlyOpen ? t('findSalons.open_now_checked', 'Open Now ✓') : t('findSalons.filter', 'Filter')}
-        </Button>
+          <Button
+            variant="secondary"
+            onClick={() => setOnlyOpen(!onlyOpen)}
+            className={`w-full sm:w-auto justify-center whitespace-nowrap text-xs sm:text-sm py-2.5 ${onlyOpen ? 'border-brand-500/40 text-brand-400' : ''}`}
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5 mr-1" />
+            {onlyOpen ? t('findSalons.open_now_checked', 'Open Now ✓') : t('findSalons.filter', 'Filter')}
+          </Button>
 
-        <Button 
-          variant="secondary"
-          onClick={() => setShowMap(!showMap)} 
-          className={`whitespace-nowrap ${showMap ? 'border-brand-500/40 text-brand-400' : ''}`}
-        >
-          <Map className="w-4 h-4" />
-          {showMap ? t('findSalons.hide_map', 'Hide Map') : t('findSalons.show_map', 'Show Map')}
-        </Button>
+          <Button 
+            variant="secondary"
+            onClick={() => setShowMap(!showMap)} 
+            className={`w-full sm:w-auto justify-center whitespace-nowrap text-xs sm:text-sm py-2.5 ${showMap ? 'border-brand-500/40 text-brand-400' : ''}`}
+          >
+            <Map className="w-3.5 h-3.5 mr-1" />
+            {showMap ? t('findSalons.hide_map', 'Hide Map') : t('findSalons.show_map', 'Show Map')}
+          </Button>
 
-        <Button variant="icon" onClick={refetch} title={t('common.refresh', 'Refresh')}>
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-        </Button>
+          <Button variant="icon" onClick={refetch} title={t('common.refresh', 'Refresh')} className="col-span-2 sm:col-span-1 justify-center py-2 h-auto">
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
+        </div>
       </div>
 
       {/* Map View */}

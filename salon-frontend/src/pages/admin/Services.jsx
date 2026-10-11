@@ -106,7 +106,7 @@ export default function Services() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto pb-20 sm:pb-8">
       <PageHeader 
         title="Services Menu"
         description="Manage haircuts, treatments, and pricing"
@@ -137,7 +137,57 @@ export default function Services() {
         />
       ) : (
         <Card className="p-0 overflow-hidden">
-          <div className="overflow-x-auto">
+          {/* Mobile Card View (Phone) */}
+          <div className="sm:hidden divide-y divide-white/[0.06]">
+            {services.map((s) => (
+              <div key={s.id} className="p-4 flex flex-col gap-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-white text-base">{s.name}</p>
+                    {s.description && (
+                      <p className="text-xs text-dark-200 mt-0.5 line-clamp-2">{s.description}</p>
+                    )}
+                  </div>
+                  <span className={`badge shrink-0 ${s.status === 'active' ? 'bg-green-500/15 text-green-400' : 'bg-dark-300/30 text-dark-100'}`}>
+                    {s.status}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <div className="flex items-center gap-3">
+                    <span className="flex items-center gap-1 text-xs text-dark-100">
+                      <Clock className="w-3.5 h-3.5 text-brand-400" aria-hidden="true" /> {s.duration_minutes}m
+                    </span>
+                    <span className="font-bold text-brand-400 text-base">₹{s.price}</span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleOpen(s)}
+                      aria-label={`Edit ${s.name}`}
+                      className="px-3 py-1.5 text-xs h-auto"
+                    >
+                      <Edit2 className="w-3.5 h-3.5 mr-1" aria-hidden="true" /> Edit
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDeleteTarget(s)}
+                      className="p-1.5 text-xs h-auto text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                      aria-label={`Delete ${s.name}`}
+                    >
+                      <Trash2 className="w-4 h-4" aria-hidden="true" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-left text-sm min-w-[560px]">
             <caption className="sr-only">Services menu — {services.length} service{services.length !== 1 ? 's' : ''}</caption>
             <thead>

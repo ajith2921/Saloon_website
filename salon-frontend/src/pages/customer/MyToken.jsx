@@ -139,7 +139,7 @@ export default function MyToken() {
   const statusCfg = STATUS_CONFIG[token.status] ?? STATUS_CONFIG.waiting
 
   return (
-    <div className="container-app max-w-md mx-auto py-8">
+    <div className="container-app max-w-md mx-auto py-4 sm:py-8 pb-32 sm:pb-8">
       <PageHeader 
         title="My Token"
         action={
@@ -163,40 +163,40 @@ export default function MyToken() {
       )}
 
       {/* Main token card */}
-      <Card className={`p-6 border-2 ${statusCfg.color} mb-6 bg-gradient-card shadow-glow-sm relative overflow-hidden`}>
+      <Card className={`p-4 sm:p-6 border-2 ${statusCfg.color} mb-6 bg-gradient-card shadow-glow-sm relative overflow-hidden`}>
         <div className="absolute inset-0 bg-gradient-radial from-brand-500/10 to-transparent pointer-events-none" />
         
-        <div className="text-center mb-8 relative z-10">
+        <div className="text-center mb-6 sm:mb-8 relative z-10">
           <p className="text-xs font-semibold uppercase tracking-widest text-dark-200 mb-2">{t('home.your_token', 'Your Token')}</p>
-          <div className="animate-token">
-            <p className="font-display text-[7rem] sm:text-[8rem] font-black text-white leading-none drop-shadow-lg mb-2">#{token.token_number}</p>
+          <div className="animate-token py-2">
+            <p className="font-display text-6xl sm:text-7xl md:text-8xl font-black text-white leading-none drop-shadow-lg mb-2">#{token.token_number}</p>
           </div>
           <TokenBadge status={token.status} />
         </div>
 
-        <div className="grid grid-cols-3 gap-4 mb-6 relative z-10">
-          <div className="bg-surface-primary/60 border border-white/5 rounded-2xl p-4 text-center">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-5 sm:mb-6 relative z-10">
+          <div className="bg-surface-primary/60 border border-white/5 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 text-center">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-dark-200 mb-1">{t('salonDetails.now_serving', 'Serving')}</p>
-            <p className="font-display font-bold text-white text-2xl leading-none">
+            <p className="font-display font-bold text-white text-xl sm:text-2xl leading-none">
               {currentToken ? `#${currentToken.token_number}` : '—'}
             </p>
           </div>
-          <div className="bg-surface-primary/60 border border-white/5 rounded-2xl p-4 text-center">
+          <div className="bg-surface-primary/60 border border-white/5 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 text-center">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-dark-200 mb-1">{t('token.queue_ahead', 'Ahead')}</p>
-            <p className="font-display font-bold text-white text-2xl leading-none">
+            <p className="font-display font-bold text-white text-xl sm:text-2xl leading-none">
               {position != null ? Math.max(0, position - 1) : '—'}
             </p>
           </div>
-          <div className="bg-brand-500/5 border border-brand-500/10 rounded-2xl p-4 text-center">
+          <div className="bg-brand-500/5 border border-brand-500/10 rounded-xl sm:rounded-2xl p-2.5 sm:p-4 text-center">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-dark-200 mb-1">{t('home.est_wait', 'Est. Wait')}</p>
-            <p className="font-display font-bold text-brand-400 text-2xl leading-none">
+            <p className="font-display font-bold text-brand-400 text-xl sm:text-2xl leading-none">
               {eta === 0 ? 'Soon!' : `~${eta}m`}
             </p>
           </div>
         </div>
 
         {/* Service info */}
-        <div className="bg-surface-tertiary rounded-xl p-3.5 flex items-center justify-between mb-4">
+        <div className="bg-surface-tertiary rounded-xl p-3 sm:p-3.5 flex items-center justify-between mb-4">
           <div className="min-w-0 pr-3">
             <p className="text-xs text-dark-200">
               {token.selected_services?.length > 1 ? `${token.selected_services.length} Services` : 'Service'}
@@ -220,13 +220,13 @@ export default function MyToken() {
 
         {/* Queue visual */}
         {token.status === 'waiting' && waitingTokens.length > 0 && (
-          <div className="mb-6 relative z-10">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-dark-200 mb-3">Queue Position</p>
+          <div className="mb-5 sm:mb-6 relative z-10">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-dark-200 mb-2 sm:mb-3">Queue Position</p>
             <div className="flex flex-wrap gap-2">
               {waitingTokens.slice(0, 10).map((t) => (
                 <div
                   key={t.id}
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold transition-all ${
+                  className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl flex items-center justify-center text-xs sm:text-sm font-bold transition-all ${
                     t.id === token.id
                       ? 'bg-brand-500 text-white ring-4 ring-brand-500/20 scale-110 z-10 shadow-glow-sm'
                       : 'bg-surface-primary border border-white/5 text-dark-200'
@@ -236,7 +236,7 @@ export default function MyToken() {
                 </div>
               ))}
               {waitingTokens.length > 10 && (
-                <div className="w-10 h-10 rounded-xl bg-surface-primary border border-white/5 flex items-center justify-center text-sm text-dark-200">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-surface-primary border border-white/5 flex items-center justify-center text-xs sm:text-sm text-dark-200">
                   +{waitingTokens.length - 10}
                 </div>
               )}
@@ -245,19 +245,19 @@ export default function MyToken() {
         )}
 
         {/* Actions */}
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2.5">
           {['waiting', 'called'].includes(token.status) && (
             <Button
               variant="danger"
               onClick={() => setConfirmOpen(true)}
               loading={cancelling}
-              className="flex-1"
+              className="flex-1 py-3 text-sm"
             >
               <X className="w-4 h-4 mr-1" /> {t('token.cancel_token', 'Cancel Token')}
             </Button>
           )}
           <Link to={`/queue/${token.salon_id}`} className="flex-1">
-            <Button variant="secondary" fullWidth>
+            <Button variant="secondary" fullWidth className="py-3 text-sm">
               <Users className="w-4 h-4 mr-1" /> {t('salonDetails.live_queue', 'Live Queue')}
             </Button>
           </Link>

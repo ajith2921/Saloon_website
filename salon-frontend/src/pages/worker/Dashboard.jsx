@@ -133,7 +133,7 @@ export default function WorkerDashboard() {
   const waitingTokens = myTokens.filter(t => t.status === 'waiting' || t.status === 'called')
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-5 sm:space-y-6 pb-20 sm:pb-8">
       <PageHeader 
         title={`Welcome, ${workerProfile.name}`}
         description="Here are the tokens assigned to you today."
@@ -141,7 +141,7 @@ export default function WorkerDashboard() {
 
       {/* Serving Now */}
       <Card>
-        <h2 className="text-lg font-semibold text-dark-100 mb-4">Serving Now</h2>
+        <h2 className="text-base sm:text-lg font-bold text-white mb-3 sm:mb-4">Serving Now</h2>
         <div className="grid sm:grid-cols-2 gap-4">
           <AnimatePresence mode="popLayout">
             {activeTokens.length === 0 ? (
@@ -162,23 +162,23 @@ export default function WorkerDashboard() {
                   className="bg-brand-500/10 border border-brand-500/20 rounded-xl p-4 relative overflow-hidden"
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-brand-500/10 to-transparent opacity-50" />
-                  <div className="relative flex justify-between items-start">
-                    <div>
+                  <div className="relative flex flex-col sm:flex-row justify-between sm:items-center gap-3.5">
+                    <div className="flex items-center gap-3">
                       <TokenBadge number={token.token_number} status={token.status} size="lg" />
-                      <div className="mt-2 space-y-1">
-                        <p className="font-medium text-dark-100">{token.profiles?.full_name || token.guest_name || 'Guest'}</p>
-                        <p className="text-sm text-brand-300">{token.services_summary || token.services?.name}</p>
+                      <div className="min-w-0">
+                        <p className="font-bold text-white text-base truncate">{token.profiles?.full_name || token.guest_name || 'Guest'}</p>
+                        <p className="text-xs sm:text-sm text-brand-300 truncate">{token.services_summary || token.services?.name}</p>
                       </div>
                     </div>
                     <Button
-                      size="sm"
+                      size="md"
                       variant="primary"
                       loading={actionLoading === token.id}
                       onClick={() => updateStatus(token.id, 'complete')}
-                      className="shrink-0"
+                      className="w-full sm:w-auto py-2.5 sm:py-2 text-sm font-bold shadow-glow-gold active:scale-[0.98] shrink-0"
                     >
-                      <Check className="w-4 h-4 mr-2" />
-                      Complete
+                      <Check className="w-4 h-4 mr-1.5" />
+                      Complete Service
                     </Button>
                   </div>
                 </motion.div>
@@ -190,12 +190,12 @@ export default function WorkerDashboard() {
 
       {/* Up Next */}
       <Card>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-dark-100">Up Next</h2>
-          <span className="text-sm text-dark-200">{waitingTokens.length} waiting</span>
+        <div className="flex items-center justify-between mb-3 sm:mb-4">
+          <h2 className="text-base sm:text-lg font-bold text-white">Up Next</h2>
+          <span className="text-xs sm:text-sm font-semibold text-brand-400 bg-brand-500/10 px-2.5 py-1 rounded-full">{waitingTokens.length} waiting</span>
         </div>
         
-        <div className="space-y-3">
+        <div className="space-y-2.5 sm:space-y-3">
           <AnimatePresence mode="popLayout">
             {waitingTokens.length === 0 ? (
               <motion.div 
@@ -212,29 +212,30 @@ export default function WorkerDashboard() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 20 }}
-                  className="flex items-center justify-between p-4 bg-surface-secondary/50 rounded-xl border border-white/5 hover:border-white/10 transition-colors"
+                  className="flex items-center justify-between p-3.5 sm:p-4 bg-surface-secondary/50 rounded-xl border border-white/5 hover:border-white/10 transition-colors gap-3"
                 >
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
                     <TokenBadge number={token.token_number} status={token.status} />
-                    <div>
-                      <p className="font-medium text-dark-100">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-white text-sm truncate">
                         {token.profiles?.full_name || token.guest_name || 'Guest'}
                       </p>
-                      <p className="text-sm text-dark-200">
+                      <p className="text-xs text-dark-200 truncate">
                         {token.services_summary || token.services?.name}
                       </p>
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <Button
                       size="sm"
                       variant={token.status === 'called' ? 'primary' : 'outline'}
                       loading={actionLoading === token.id}
                       onClick={() => updateStatus(token.id, token.status === 'called' ? 'start' : 'call', token)}
+                      className="px-3.5 py-2 text-xs font-semibold active:scale-95"
                     >
                       {token.status === 'called' ? (
-                        <><Play className="w-4 h-4 mr-2" /> Serve</>
+                        <><Play className="w-3.5 h-3.5 mr-1" /> Serve</>
                       ) : (
                         'Call'
                       )}

@@ -120,22 +120,22 @@ export default function SalonDetails() {
         </div>
       </div>
 
-      <div className="container-app -mt-8 relative z-10 pb-16">
+      <div className="container-app -mt-8 relative z-10 pb-44 lg:pb-16">
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Main info */}
           <div className="lg:col-span-2 flex flex-col gap-5">
             {/* Header card */}
-            <Card className="p-5">
-              <div className="flex items-start gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-brand flex items-center justify-center shadow-glow-sm flex-shrink-0">
+            <Card className="p-4 sm:p-5">
+              <div className="flex items-start gap-3.5 sm:gap-4">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-brand flex items-center justify-center shadow-glow-sm flex-shrink-0">
                   {salon.logo_url ? (
-                    <img src={salon.logo_url} alt={salon.name} className="w-16 h-16 rounded-2xl object-cover" />
+                    <img src={salon.logo_url} alt={salon.name} className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl object-cover" />
                   ) : (
-                    <Scissors className="w-8 h-8 text-white" />
+                    <Scissors className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h1 className="text-3xl sm:text-4xl font-display font-bold text-white leading-tight">{salon.name}</h1>
+                  <h1 className="text-2xl sm:text-4xl font-display font-bold text-white leading-tight">{salon.name}</h1>
                   <div className="flex flex-wrap items-center gap-3 mt-1">
                     <StarRating rating={salon.avg_rating ?? 4.5} size="md" />
                     <span className="text-dark-200 text-sm">
@@ -358,11 +358,11 @@ export default function SalonDetails() {
       </div>
 
       {/* Mobile Sticky CTA */}
-      <div className="lg:hidden fixed bottom-16 left-0 right-0 p-4 bg-surface-secondary/90 backdrop-blur-xl border-t border-white/10 z-40 pb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex-1">
-            <p className="text-xs font-semibold text-dark-200 uppercase tracking-widest mb-0.5">{t('salonDetails.est_wait', 'Est. Wait')}</p>
-            <p className="text-xl font-display font-bold text-brand-400 leading-none">
+      <div className="lg:hidden fixed bottom-16 left-0 right-0 p-3 sm:p-4 bg-surface-secondary/95 backdrop-blur-xl border-t border-white/10 z-40 mb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+        <div className="flex items-center justify-between gap-3">
+          <div className="shrink-0 pr-2">
+            <p className="text-[10px] font-semibold text-dark-200 uppercase tracking-widest mb-0.5">{t('salonDetails.est_wait', 'Est. Wait')}</p>
+            <p className="text-lg sm:text-xl font-display font-bold text-brand-400 leading-none">
               {waitMins === 0 ? '0m' : `~${waitMins}m`}
             </p>
           </div>

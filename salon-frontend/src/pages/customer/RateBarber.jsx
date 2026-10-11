@@ -51,8 +51,8 @@ export default function RateBarber() {
   )
 
   return (
-    <div className="container-app max-w-sm mx-auto py-12">
-      <Card className="p-6">
+    <div className="container-app max-w-sm mx-auto py-6 sm:py-12 pb-32 sm:pb-12">
+      <Card className="p-4 sm:p-6">
         {/* Worker info */}
         <div className="text-center mb-6">
           <div className="w-16 h-16 rounded-2xl bg-gradient-brand flex items-center justify-center mx-auto mb-3 shadow-glow-sm">

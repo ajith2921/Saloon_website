@@ -14,7 +14,7 @@ export default function History() {
   const [receiptToken, setReceiptToken] = useState(null)
 
   return (
-    <div className="container-app max-w-2xl mx-auto py-8">
+    <div className="container-app max-w-2xl mx-auto py-4 sm:py-8 pb-32 sm:pb-8">
       <PageHeader title="Visit History" />
 
       {loading && (
@@ -49,10 +49,10 @@ export default function History() {
       {!loading && !error && tokens.length > 0 && (
         <div className="flex flex-col gap-3">
           {tokens.map((token) => (
-            <Card key={token.id} hover className="p-4 flex flex-col sm:flex-row sm:items-center gap-4 group">
-              <div className="flex items-center gap-4 flex-1">
-                <div className="w-12 h-12 rounded-xl bg-surface-tertiary flex items-center justify-center flex-shrink-0 group-hover:bg-brand-500/10 transition-colors border border-transparent group-hover:border-brand-500/20">
-                  <span className="font-bold text-white text-sm">#{token.token_number}</span>
+            <Card key={token.id} hover className="p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 group">
+              <div className="flex items-center gap-3 sm:gap-4 flex-1">
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-surface-tertiary flex items-center justify-center flex-shrink-0 group-hover:bg-brand-500/10 transition-colors border border-transparent group-hover:border-brand-500/20">
+                  <span className="font-bold text-white text-xs sm:text-sm">#{token.token_number}</span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between">
@@ -65,25 +65,25 @@ export default function History() {
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-dark-200 mt-0.5">
+                  <p className="text-xs text-dark-200 mt-0.5 truncate">
                     {token.services_summary || token.services?.name} · {formatDate(token.created_at)}
                   </p>
-                  <div className="flex items-center gap-2 mt-2">
+                  <div className="flex items-center gap-2 mt-1.5">
                     <TokenBadge status={token.status} />
                   </div>
                 </div>
               </div>
               
               {token.status === 'completed' && (
-                <div className="pt-3 sm:pt-0 border-t border-white/5 sm:border-t-0 mt-3 sm:mt-0 flex-shrink-0 flex items-center gap-2">
+                <div className="pt-2.5 sm:pt-0 border-t border-white/5 sm:border-t-0 mt-2 sm:mt-0 flex-shrink-0 flex items-center gap-2 w-full sm:w-auto">
                   {!token.ratings?.length && (
-                    <Link to={`/rate/${token.id}`} className="block">
-                      <Button variant="secondary" className="w-full sm:w-auto text-xs px-4 py-2 h-auto shadow-glow-sm">
+                    <Link to={`/rate/${token.id}`} className="flex-1 sm:flex-initial">
+                      <Button variant="secondary" fullWidth className="text-xs px-4 py-2.5 h-auto shadow-glow-sm">
                         <Star className="w-3.5 h-3.5 mr-1.5" /> Rate
                       </Button>
                     </Link>
                   )}
-                  <Button variant="ghost" onClick={() => setReceiptToken(token)} className="text-xs px-3 py-2 h-auto text-dark-200 hover:text-white">
+                  <Button variant="ghost" onClick={() => setReceiptToken(token)} className="flex-1 sm:flex-initial text-xs px-3 py-2.5 h-auto text-dark-200 hover:text-white">
                      <FileText className="w-3.5 h-3.5 mr-1" /> Receipt
                   </Button>
                 </div>

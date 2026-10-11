@@ -61,22 +61,22 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-surface-primary flex items-center justify-center px-4 bg-grid relative overflow-hidden">
+    <div className="min-h-screen bg-surface-primary flex items-center justify-center px-4 py-8 sm:py-12 bg-grid relative overflow-y-auto">
       {/* Background gradient — larger and more visible */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(234,179,8,0.12),transparent)] pointer-events-none" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_40%_40%_at_80%_80%,rgba(234,179,8,0.05),transparent)] pointer-events-none" />
 
-      <div className="w-full max-w-md relative z-10 animate-fade-in">
+      <div className="w-full max-w-md relative z-10 animate-fade-in my-auto">
         {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-brand shadow-glow-gold mb-4">
-            <Scissors className="w-8 h-8 text-white" />
+        <div className="text-center mb-6 sm:mb-8">
+          <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-brand shadow-glow-gold mb-3 sm:mb-4">
+            <Scissors className="w-7 h-7 sm:w-8 sm:h-8 text-white" />
           </div>
-          <h1 className="text-2xl font-bold text-white">{t('auth.welcome_back')}</h1>
-          <p className="text-dark-100 text-sm mt-1">Sign in to your QueueCut account</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-white">{t('auth.welcome_back')}</h1>
+          <p className="text-dark-100 text-xs sm:text-sm mt-1">Sign in to your QueueCut account</p>
         </div>
 
-        <Card>
+        <Card className="p-4 sm:p-6">
           <Button
             type="button"
             variant="secondary"

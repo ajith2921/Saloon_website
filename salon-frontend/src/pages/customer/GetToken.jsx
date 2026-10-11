@@ -160,34 +160,34 @@ export default function GetToken() {
   }
 
   return (
-    <div className="container-app max-w-2xl mx-auto py-8">
+    <div className="container-app max-w-2xl mx-auto py-4 sm:py-8 pb-32 sm:pb-8">
       {/* Back */}
-      <Link to={`/salons/${salonId}`} className="flex items-center gap-1.5 text-dark-100 hover:text-white text-sm mb-6 transition-colors">
+      <Link to={`/salons/${salonId}`} className="inline-flex items-center gap-1.5 text-dark-100 hover:text-white text-sm mb-4 sm:mb-6 transition-colors p-1 -ml-1">
         <ChevronLeft className="w-4 h-4" /> Back to {salon?.name ?? 'Salon'}
       </Link>
 
-      <div className="flex items-center gap-4 mb-6">
-        <div className="w-12 h-12 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center">
-          <Scissors className="w-6 h-6 text-brand-400" />
+      <div className="flex items-center gap-3.5 sm:gap-4 mb-5 sm:mb-6">
+        <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center shrink-0">
+          <Scissors className="w-5 h-5 sm:w-6 sm:h-6 text-brand-400" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-white mb-1">Get Your Token</h1>
-          <p className="text-dark-100 text-sm">Join the queue at {salon?.name}</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-white mb-0.5">Get Your Token</h1>
+          <p className="text-dark-100 text-xs sm:text-sm">Join the queue at {salon?.name}</p>
         </div>
       </div>
 
-      <div className="bg-surface-secondary border border-white/5 rounded-2xl p-6">
+      <div className="bg-surface-secondary border border-white/5 rounded-2xl p-3.5 sm:p-6 shadow-card">
         
         {/* Toggle between Live Queue and Booking */}
-        <div className="flex bg-surface-tertiary p-1 rounded-lg mb-6">
+        <div className="flex bg-surface-tertiary p-1 rounded-xl mb-5 sm:mb-6">
           <button
-            className={`flex-1 py-2 text-sm font-semibold rounded-md transition-colors ${!isBooking ? 'bg-surface-primary text-white shadow' : 'text-dark-200 hover:text-white'}`}
+            className={`flex-1 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg transition-all ${!isBooking ? 'bg-surface-primary text-white shadow' : 'text-dark-200 hover:text-white'}`}
             onClick={() => setIsBooking(false)}
           >
             Live Queue
           </button>
           <button
-            className={`flex-1 py-2 text-sm font-semibold rounded-md transition-colors ${isBooking ? 'bg-surface-primary text-white shadow' : 'text-dark-200 hover:text-white'}`}
+            className={`flex-1 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg transition-all ${isBooking ? 'bg-surface-primary text-white shadow' : 'text-dark-200 hover:text-white'}`}
             onClick={() => setIsBooking(true)}
           >
             Book Appointment
@@ -195,29 +195,29 @@ export default function GetToken() {
         </div>
 
         {/* 1. Services */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-3">
+        <div className="mb-5 sm:mb-6">
+          <div className="flex items-center justify-between mb-2.5 sm:mb-3">
             <div>
-              <label className="block text-sm font-semibold text-white">
-                1. Select Services <span className="text-brand-400 text-xs font-normal">(Choose one or more)</span>
+              <label className="block text-xs sm:text-sm font-semibold text-white">
+                1. Select Services <span className="text-brand-400 text-[11px] sm:text-xs font-normal">(Choose one or more)</span>
               </label>
-              <p className="text-xs text-dark-200 mt-0.5">Tap to select or deselect multiple services</p>
+              <p className="text-[11px] sm:text-xs text-dark-200 mt-0.5">Tap to select or deselect multiple services</p>
             </div>
             {selectedServices.length > 0 && (
-              <span className="px-2.5 py-1 rounded-full bg-brand-500/20 border border-brand-500/30 text-brand-300 text-xs font-semibold">
+              <span className="px-2.5 py-1 rounded-full bg-brand-500/20 border border-brand-500/30 text-brand-300 text-[11px] sm:text-xs font-semibold shrink-0">
                 {selectedServices.length} selected
               </span>
             )}
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-3">
+          <div className="grid sm:grid-cols-2 gap-2.5 sm:gap-3">
             {services.map(s => {
               const isSelected = selectedServices.some(sel => sel.id === s.id)
               return (
                 <div 
                   key={s.id}
                   onClick={() => toggleService(s)}
-                  className={`p-4 rounded-xl border transition-all cursor-pointer relative overflow-hidden select-none ${
+                  className={`p-3 sm:p-4 rounded-xl border transition-all cursor-pointer relative overflow-hidden select-none active:scale-[0.99] ${
                     isSelected 
                       ? 'border-brand-500 bg-brand-500/10 shadow-glow-sm ring-1 ring-brand-500/30' 
                       : 'border-white/5 bg-surface-tertiary hover:border-white/10'
@@ -351,7 +351,7 @@ export default function GetToken() {
           onClick={handleGetToken} 
           loading={loading}
           disabled={selectedServices.length === 0 || (isBooking && !scheduledFor)}
-          className="h-14 text-lg"
+          className="h-13 sm:h-14 text-base sm:text-lg shadow-glow-gold active:scale-[0.98]"
         >
           {isBooking 
             ? `Book Appointment (₹${totalPrice})` 
@@ -360,8 +360,8 @@ export default function GetToken() {
         </Button>
       </div>
 
-      <p className="text-xs text-dark-200 text-center mt-3">
-        <AlertCircle className="w-3 h-3 inline mr-1" />
+      <p className="text-xs text-dark-200 text-center mt-3 pb-8">
+        <AlertCircle className="w-3.5 h-3.5 inline mr-1" />
         You can cancel your token anytime before being called.
       </p>
     </div>

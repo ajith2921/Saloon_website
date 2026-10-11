@@ -297,12 +297,12 @@ export default function QueueManagement() {
                         </div>
                       </div>
 
-                      <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-32 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/[0.06]">
+                      <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-32 pt-2.5 sm:pt-0 border-t sm:border-t-0 border-white/[0.06]">
                         {t.status === 'waiting' && (
                           <Button
                             onClick={() => updateStatus(t.id, 'call', t)}
                             loading={actionLoading === t.id}
-                            className="flex-1 sm:w-full py-2 text-xs sm:text-sm"
+                            className="flex-1 sm:w-full py-2.5 sm:py-2 text-xs sm:text-sm active:scale-95 shadow-glow-sm"
                             aria-label={`Call token ${t.token_number}`}
                           >
                             <Volume2 className="w-3.5 h-3.5 mr-1" aria-hidden="true" /> Call
@@ -312,7 +312,7 @@ export default function QueueManagement() {
                           <Button
                             onClick={() => updateStatus(t.id, 'start', t)}
                             loading={actionLoading === t.id}
-                            className="flex-1 sm:w-full py-2 text-xs sm:text-sm"
+                            className="flex-1 sm:w-full py-2.5 sm:py-2 text-xs sm:text-sm active:scale-95 shadow-glow-sm"
                             aria-label={`Start serving token ${t.token_number}`}
                           >
                             <Play className="w-3.5 h-3.5 mr-1" aria-hidden="true" /> Start
@@ -323,7 +323,7 @@ export default function QueueManagement() {
                             variant="secondary"
                             onClick={() => updateStatus(t.id, 'complete', t)}
                             loading={actionLoading === t.id}
-                            className="flex-1 sm:w-full py-2 text-xs sm:text-sm !border-green-500/40 !text-green-400 hover:!bg-green-500/10"
+                            className="flex-1 sm:w-full py-2.5 sm:py-2 text-xs sm:text-sm !border-green-500/40 !text-green-400 hover:!bg-green-500/10 active:scale-95"
                             aria-label={`Complete token ${t.token_number}`}
                           >
                             <Check className="w-3.5 h-3.5 mr-1" aria-hidden="true" /> Complete
@@ -333,7 +333,7 @@ export default function QueueManagement() {
                           variant="ghost"
                           onClick={() => updateStatus(t.id, 'skip', t)}
                           loading={actionLoading === t.id}
-                          className="flex-1 sm:w-full py-2 text-xs sm:text-sm !text-dark-200 hover:!text-purple-400"
+                          className="flex-1 sm:w-full py-2.5 sm:py-2 text-xs sm:text-sm !text-dark-200 hover:!text-purple-400 active:scale-95"
                           aria-label={`Skip token ${t.token_number}`}
                         >
                           <SkipForward className="w-3.5 h-3.5 mr-1" aria-hidden="true" /> Skip

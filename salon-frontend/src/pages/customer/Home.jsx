@@ -22,10 +22,10 @@ export default function Home() {
   const hasActiveToken = myToken && ['waiting', 'called', 'serving'].includes(myToken.status)
 
   return (
-    <div className="flex flex-col gap-12 sm:gap-20">
+    <div className="flex flex-col gap-10 sm:gap-20 pb-20 sm:pb-8">
       
       {/* HERO SECTION */}
-      <section className="relative w-full pt-16 pb-20 sm:pt-24 sm:pb-32 overflow-hidden border-b border-white/5 bg-surface-secondary/30 rounded-3xl">
+      <section className="relative w-full pt-10 pb-14 sm:pt-24 sm:pb-32 overflow-hidden border-b border-white/5 bg-surface-secondary/30 rounded-2xl sm:rounded-3xl">
         {/* Animated grid background */}
         <div className="absolute inset-0 bg-grid opacity-60 pointer-events-none" />
         {/* Radial gradient over grid */}
@@ -43,7 +43,7 @@ export default function Home() {
                 {t('home.active_token')}
               </div>
               <h1 className="text-sm font-semibold text-dark-100 uppercase tracking-widest mb-2">{t('home.your_token')}</h1>
-              <div className="text-[6rem] sm:text-[8rem] font-display font-black text-white leading-none tracking-tighter mb-4 drop-shadow-2xl shadow-brand-500/20">
+              <div className="text-5xl sm:text-7xl md:text-8xl font-display font-black text-white leading-none tracking-tighter mb-4 drop-shadow-2xl shadow-brand-500/20 py-2">
                 #{myToken.token_number}
               </div>
               <TokenBadge status={myToken.status} />

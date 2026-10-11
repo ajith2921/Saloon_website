@@ -139,32 +139,36 @@ export default function CustomerLayout() {
             Queue<span className="text-brand-400">Cut</span>
           </span>
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <LanguageSwitcher />
           {user ? (
             <>
             <Link
               to="/notifications"
               aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
-              className="relative text-dark-200 hover:text-white transition-colors p-1"
+              className="relative text-dark-200 hover:text-white transition-colors p-2.5 rounded-xl hover:bg-white/5 active:scale-95"
             >
               <Bell className="w-5 h-5" aria-hidden="true" />
               {unreadCount > 0 && (
-                <span className="absolute top-0 right-0 w-3 h-3 bg-error rounded-full border-2 border-surface-primary" aria-hidden="true" />
+                <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-error rounded-full border-2 border-surface-primary" aria-hidden="true" />
               )}
             </Link>
-            <Button variant="ghost" onClick={handleSignOut} aria-label="Sign out" className="text-dark-200 hover:text-error !p-1">
+            <button 
+              onClick={handleSignOut} 
+              aria-label="Sign out" 
+              className="text-dark-200 hover:text-error p-2.5 rounded-xl hover:bg-white/5 active:scale-95 transition-colors"
+            >
               <LogOut className="w-5 h-5" aria-hidden="true" />
-            </Button>
+            </button>
             </>
           ) : (
-            <Link to="/login" className="text-xs font-bold text-brand-400">Login</Link>
+            <Link to="/login" className="text-xs font-bold text-brand-400 px-3 py-1.5 rounded-lg bg-brand-500/10 border border-brand-500/20">Login</Link>
           )}
         </div>
       </header>
 
       {/* Main Content */}
-      <main id="main-content" className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-24 sm:pb-8">
+      <main id="main-content" className="flex-1 w-full max-w-7xl mx-auto px-3.5 sm:px-6 py-4 sm:py-6 pb-32 sm:pb-8">
         <Outlet />
       </main>
 
@@ -178,8 +182,8 @@ export default function CustomerLayout() {
       </footer>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="sm:hidden fixed bottom-0 w-full z-50 bg-surface-secondary/90 backdrop-blur-xl border-t border-white/10 pb-safe" aria-label="Mobile navigation">
-        <div className="flex items-center justify-around h-16 px-2">
+      <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface-secondary/95 backdrop-blur-xl border-t border-white/10 pb-safe shadow-[0_-8px_30px_rgba(0,0,0,0.5)]" aria-label="Mobile navigation">
+        <div className="flex items-center justify-around h-16 px-1">
           {navLinks.map((link) => {
             const isActive = location.pathname === link.path || (link.path !== '/' && location.pathname.startsWith(link.path))
             const Icon = link.icon
@@ -189,14 +193,17 @@ export default function CustomerLayout() {
                 to={link.path}
                 aria-label={link.name}
                 aria-current={isActive ? 'page' : undefined}
-                className={`relative flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${
-                  isActive ? 'text-brand-400' : 'text-dark-200 hover:text-dark-100'
+                className={`relative flex-1 flex flex-col items-center justify-center h-full max-w-[84px] py-1 transition-all active:scale-95 ${
+                  isActive ? 'text-brand-400 font-bold' : 'text-dark-200 hover:text-dark-100 font-medium'
                 }`}
               >
-                <div className={`p-1 rounded-xl transition-colors ${isActive ? 'bg-brand-500/10' : ''}`}>
-                  <Icon className={`w-5 h-5 ${isActive ? 'animate-pulse-slow' : ''}`} aria-hidden="true" />
+                <div className={`p-1.5 rounded-xl transition-all ${isActive ? 'bg-brand-500/15 shadow-glow-sm' : ''}`}>
+                  <Icon className={`w-5 h-5 ${isActive ? 'text-brand-400' : 'text-dark-200'}`} aria-hidden="true" />
                 </div>
-                <span className="text-[10px] font-medium" aria-hidden="true">{link.name}</span>
+                <span className="text-[10px] tracking-tight mt-0.5" aria-hidden="true">{link.name}</span>
+                {isActive && (
+                  <span className="absolute top-0 inset-x-4 h-0.5 bg-brand-400 rounded-full shadow-glow-sm" aria-hidden="true" />
+                )}
               </Link>
             )
           })}

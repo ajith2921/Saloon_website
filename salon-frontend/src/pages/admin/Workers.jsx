@@ -188,7 +188,7 @@ export default function Workers() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-5xl mx-auto pb-20 sm:pb-8">
       <PageHeader 
         title="Barbers & Staff"
         description="Manage your salon's workforce"

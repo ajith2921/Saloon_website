@@ -150,8 +150,8 @@ export default function AdminLayout() {
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 w-full z-50 bg-surface-secondary/90 backdrop-blur-xl border-t border-white/10 pb-safe" aria-label="Admin mobile navigation">
-        <div className="flex items-center justify-around h-16 px-2">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface-secondary/95 backdrop-blur-xl border-t border-white/10 pb-safe shadow-[0_-8px_30px_rgba(0,0,0,0.5)]" aria-label="Admin mobile navigation">
+        <div className="flex items-center justify-around h-16 px-1">
           {mobileNav.map(({ to, icon: Icon, label }) => (
             <NavLink
               key={to}
@@ -159,15 +159,20 @@ export default function AdminLayout() {
               end={to === '/admin'}
               aria-label={label}
               className={({ isActive }) => 
-                `flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${
-                  isActive ? 'text-brand-400' : 'text-dark-200 hover:text-dark-100'
+                `relative flex-1 flex flex-col items-center justify-center h-full max-w-[84px] py-1 transition-all active:scale-95 ${
+                  isActive ? 'text-brand-400 font-bold' : 'text-dark-200 hover:text-dark-100 font-medium'
                 }`
               }
             >
               {({ isActive }) => (
                 <>
-                  <Icon className={`w-5 h-5 ${isActive ? 'animate-pulse-slow' : ''}`} aria-hidden="true" />
-                  <span className="text-[10px] font-medium" aria-hidden="true">{label}</span>
+                  <div className={`p-1.5 rounded-xl transition-all ${isActive ? 'bg-brand-500/15 shadow-glow-sm' : ''}`}>
+                    <Icon className={`w-5 h-5 ${isActive ? 'text-brand-400' : 'text-dark-200'}`} aria-hidden="true" />
+                  </div>
+                  <span className="text-[10px] tracking-tight mt-0.5" aria-hidden="true">{label}</span>
+                  {isActive && (
+                    <span className="absolute top-0 inset-x-3 h-0.5 bg-brand-400 rounded-full shadow-glow-sm" aria-hidden="true" />
+                  )}
                   {isActive && <span className="sr-only">(current page)</span>}
                 </>
               )}

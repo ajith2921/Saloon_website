@@ -21,30 +21,30 @@ export default function WorkerLayout() {
       </a>
 
       {/* Main */}
-      <div className="flex-1 flex flex-col min-w-0 pb-16 md:pb-0">
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
-        <header className="h-16 flex items-center justify-between px-6 border-b border-white/[0.06] bg-surface-primary/90 backdrop-blur sticky top-0 z-10">
+        <header className="h-14 sm:h-16 flex items-center justify-between px-4 sm:px-6 border-b border-white/[0.06] bg-surface-primary/90 backdrop-blur sticky top-0 z-10">
           <h1 className="text-sm font-semibold text-dark-100">Worker Portal</h1>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <LanguageSwitcher />
             <button
               onClick={signOut}
-              className="btn-icon relative"
+              className="p-2 rounded-xl text-red-400 hover:text-red-300 hover:bg-red-500/10 active:scale-95 transition-all"
               aria-label="Sign Out"
             >
-              <LogOut className="w-4 h-4 text-red-500" aria-hidden="true" />
+              <LogOut className="w-5 h-5 text-red-500" aria-hidden="true" />
             </button>
           </div>
         </header>
 
         {/* Page content */}
-        <main id="worker-main-content" className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 scrollbar-thin">
+        <main id="worker-main-content" className="flex-1 overflow-y-auto overflow-x-hidden p-3.5 sm:p-6 pb-28 md:pb-8 scrollbar-thin">
           <Outlet />
         </main>
       </div>
 
       {/* Mobile Bottom Navigation */}
-      <nav className="md:hidden fixed bottom-0 w-full z-50 bg-surface-secondary/90 backdrop-blur-xl border-t border-white/10 pb-safe" aria-label="Worker mobile navigation">
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-surface-secondary/95 backdrop-blur-xl border-t border-white/10 pb-safe shadow-[0_-8px_30px_rgba(0,0,0,0.5)]" aria-label="Worker mobile navigation">
         <div className="flex items-center justify-around h-16 px-2">
           {mobileNav.map(({ to, icon: Icon, label }) => (
             <NavLink
@@ -53,8 +53,8 @@ export default function WorkerLayout() {
               end={true}
               aria-label={label}
               className={({ isActive }) => 
-                `flex flex-col items-center justify-center w-16 h-full gap-1 transition-colors ${
-                  isActive ? 'text-brand-400' : 'text-dark-200 hover:text-dark-100'
+                `flex flex-col items-center justify-center w-20 h-full gap-1 transition-colors active:scale-95 ${
+                  isActive ? 'text-brand-400 font-bold' : 'text-dark-200 hover:text-dark-100'
                 }`
               }
             >
