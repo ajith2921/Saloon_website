@@ -77,12 +77,31 @@ export function useRealtimeQueue(salonId, onTokenChange, adminMode = false) {
     }
   }, [salonId, refetch, endpoint, queryClient, adminMode])
 
-  const activeTokens  = tokens.filter((t) => ['waiting', 'called', 'serving', 'scheduled'].includes(t.status))
-  const currentToken  = tokens.find((t) => t.status === 'serving') ?? tokens.find((t) => t.status === 'called')
-  const waitingTokens = tokens.filter((t) => t.status === 'waiting' && !t.is_booking)
-  const bookingTokens = tokens.filter((t) => t.status === 'scheduled')
+  const updateTokenOptimistic = (tokenId, updates) => {
+    queryClient.setQueryData([endpoint], (oldTokens) => {
+      if (!oldTokens) return oldTokens
+      return oldTokens.map((t) => {
+        if (t.id === tokenId) {
+          const patch = typeof updates === 'function' ? updates(t) : updates
+          return { ...t, ...patch }
+        }
+        return t
+      })
+    })
+  }
 
-  return { tokens, activeTokens, currentToken, waitingTokens, bookingTokens, loading: isLoading, refetch }
+  return {
+    tokens,
+    activeTokens,
+    currentToken,
+    waitingTokens,
+    bookingTokens,
+    loading: isLoading,
+    refetch,
+    updateTokenOptimistic,
+    queryClient,
+    endpoint,
+  }
 }
 
 export function useRealtimeToken(tokenId, onStatusChange) {

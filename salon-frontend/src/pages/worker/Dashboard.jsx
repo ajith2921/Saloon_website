@@ -11,7 +11,7 @@ export default function WorkerDashboard() {
   const { profile } = useAuth()
   const salonId = profile?.db_salon_id ?? profile?.salons?.[0]?.id
   // Fetch real-time queue in admin mode
-  const { tokens, loading, refetch } = useRealtimeQueue(salonId, undefined, true)
+  const { tokens, loading, refetch, updateTokenOptimistic, queryClient, endpoint } = useRealtimeQueue(salonId, undefined, true)
   const { success, error: showError, warning: showWarning } = useToast()
   
   const [workerProfile, setWorkerProfile] = useState(null)
@@ -34,9 +34,39 @@ export default function WorkerDashboard() {
 
   const updateStatus = async (tokenId, action, tokenData = null) => {
     setActionLoading(tokenId)
+
+    const actionToStatus = {
+      call: 'called',
+      start: 'serving',
+      complete: 'completed',
+      skip: 'skipped',
+    }
+
+    const nextStatus = actionToStatus[action]
+    const previousTokens = queryClient?.getQueryData([endpoint]) || tokens
+
+    // 1. Instant 0ms Optimistic UI update
+    if (nextStatus && updateTokenOptimistic) {
+      updateTokenOptimistic(tokenId, (prev) => ({
+        ...prev,
+        status: nextStatus,
+        ...(action === 'call' ? { called_at: new Date().toISOString() } : {}),
+        ...(action === 'start' ? { started_at: new Date().toISOString() } : {}),
+        ...(action === 'complete' ? { completed_at: new Date().toISOString() } : {}),
+      }))
+    }
+
     try {
       const res = await api.put(`/api/tokens/${tokenId}/${action}`)
       const tokenNumber = tokenData?.token_number ? `#${tokenData.token_number}` : 'Token'
+
+      // 2. Patch cache with authoritative response
+      if (res.data && updateTokenOptimistic) {
+        updateTokenOptimistic(tokenId, res.data)
+      }
+
+      // 3. Immediately background refetch
+      refetch()
 
       if (action === 'call') {
         const smsStatus = res.data?.sms_status
@@ -69,6 +99,10 @@ export default function WorkerDashboard() {
         success(`${tokenNumber} ${actionLabels[action] || action} successfully`)
       }
     } catch (err) {
+      // 4. Roll back on error
+      if (queryClient && endpoint) {
+        queryClient.setQueryData([endpoint], previousTokens)
+      }
       showError(err.message || `Failed to ${action} token`)
     } finally {
       setActionLoading(null)

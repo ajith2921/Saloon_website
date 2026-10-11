@@ -14,7 +14,7 @@ export default function QueueManagement() {
   // db_salon_id is set by the backend profile resolution and is authoritative
   const salonId = profile?.db_salon_id ?? profile?.salons?.[0]?.id
   // adminMode=true → uses /queue/admin (authenticated) which includes profiles(full_name, phone)
-  const { tokens, activeTokens, waitingTokens, bookingTokens, loading, refetch } = useRealtimeQueue(salonId, undefined, true)
+  const { tokens, activeTokens, waitingTokens, bookingTokens, loading, refetch, updateTokenOptimistic, queryClient, endpoint } = useRealtimeQueue(salonId, undefined, true)
   const { success, error: showError, warning: showWarning } = useToast()
   const [actionLoading, setActionLoading] = useState(null)
 
@@ -33,9 +33,44 @@ export default function QueueManagement() {
 
   const updateStatus = async (tokenId, action, tokenData = null) => {
     setActionLoading(tokenId)
+
+    const actionToStatus = {
+      call: 'called',
+      start: 'serving',
+      complete: 'completed',
+      skip: 'skipped',
+      cancel: 'cancelled',
+      recall: 'called',
+    }
+
+    const nextStatus = actionToStatus[action]
+
+    // Capture previous state for rollback if needed
+    const previousTokens = queryClient?.getQueryData([endpoint]) || tokens
+
+    // 1. INSTANT 0ms Optimistic UI update
+    if (nextStatus && updateTokenOptimistic) {
+      updateTokenOptimistic(tokenId, (prev) => ({
+        ...prev,
+        status: nextStatus,
+        ...(action === 'call' ? { called_at: new Date().toISOString() } : {}),
+        ...(action === 'start' ? { started_at: new Date().toISOString() } : {}),
+        ...(action === 'complete' ? { completed_at: new Date().toISOString() } : {}),
+        ...(action === 'cancel' ? { cancelled_at: new Date().toISOString() } : {}),
+      }))
+    }
+
     try {
       const res = await api.put(`/api/tokens/${tokenId}/${action}`)
       const tokenNumber = tokenData?.token_number ? `#${tokenData.token_number}` : 'Token'
+
+      // 2. Patch cache with authoritative server response
+      if (res.data && updateTokenOptimistic) {
+        updateTokenOptimistic(tokenId, res.data)
+      }
+
+      // 3. Immediately trigger background refetch to ensure order & counts stay 100% in sync
+      refetch()
 
       if (action === 'call') {
         const smsStatus = res.data?.sms_status
@@ -70,6 +105,10 @@ export default function QueueManagement() {
         success(`${tokenNumber} ${actionLabels[action] || action} successfully`)
       }
     } catch (err) {
+      // 4. Roll back on error
+      if (queryClient && endpoint) {
+        queryClient.setQueryData([endpoint], previousTokens)
+      }
       showError(err.message || `Failed to ${action} token`)
     } finally {
       setActionLoading(null)
@@ -253,6 +292,16 @@ export default function QueueManagement() {
                       </div>
 
                       <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-32 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/[0.06]">
+                        {t.status === 'waiting' && (
+                          <Button
+                            onClick={() => updateStatus(t.id, 'call', t)}
+                            loading={actionLoading === t.id}
+                            className="flex-1 sm:w-full py-2 text-xs sm:text-sm"
+                            aria-label={`Call token ${t.token_number}`}
+                          >
+                            <Volume2 className="w-3.5 h-3.5 mr-1" aria-hidden="true" /> Call
+                          </Button>
+                        )}
                         {t.status === 'called' && (
                           <Button
                             onClick={() => updateStatus(t.id, 'start', t)}
