@@ -18,6 +18,63 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/tokens", tags=["Tokens"])
 
 
+async def enrich_tokens_services(tokens_list: list, async_supabase_admin) -> list:
+    if not tokens_list:
+        return tokens_list
+
+    # Gather service IDs that need querying
+    needed_ids = set()
+    for t in tokens_list:
+        sids = t.get("service_ids")
+        if isinstance(sids, list) and sids:
+            for s in sids:
+                if s:
+                    needed_ids.add(str(s))
+        elif t.get("service_id"):
+            needed_ids.add(str(t["service_id"]))
+
+    services_by_id = {}
+    if needed_ids:
+        try:
+            svc_res = await async_supabase_admin.table("services").select(
+                "id, name, price, duration_minutes"
+            ).in_("id", list(needed_ids)).execute()
+            if svc_res.data:
+                for s in svc_res.data:
+                    services_by_id[str(s["id"])] = s
+        except Exception as e:
+            logger.warning(f"Failed to fetch extra services details: {e}")
+
+    for t in tokens_list:
+        sids = t.get("service_ids")
+        if isinstance(sids, list) and len(sids) > 0:
+            matched = [services_by_id[str(sid)] for sid in sids if str(sid) in services_by_id]
+        elif t.get("service_id") and str(t["service_id"]) in services_by_id:
+            matched = [services_by_id[str(t["service_id"])]]
+        elif t.get("services"):
+            matched = [t["services"]]
+        else:
+            matched = []
+
+        if matched:
+            t["selected_services"] = matched
+            t["services_summary"] = ", ".join(s.get("name", "") for s in matched if s.get("name"))
+            t["total_duration"] = sum(s.get("duration_minutes", 0) for s in matched)
+            t["total_price"] = sum(float(s.get("price", 0)) for s in matched)
+            # Backward-compat: update primary service dictionary if multiple services
+            if len(matched) > 1 and "services" in t and isinstance(t["services"], dict):
+                t["services"]["name"] = t["services_summary"]
+                t["services"]["duration_minutes"] = t["total_duration"]
+                t["services"]["price"] = t["total_price"]
+        else:
+            t["selected_services"] = [t.get("services")] if t.get("services") else []
+            t["services_summary"] = (t.get("services") or {}).get("name") or "Service"
+            t["total_duration"] = (t.get("services") or {}).get("duration_minutes") or 30
+            t["total_price"] = (t.get("services") or {}).get("price") or 0
+
+    return tokens_list
+
+
 @router.post("")
 @limiter.limit("3/minute")
 async def create_token(request: Request, token: TokenCreate, user: dict = Depends(get_current_user_with_profile)):
@@ -43,21 +100,47 @@ async def create_token(request: Request, token: TokenCreate, user: dict = Depend
     else:
         raise HTTPException(status_code=403, detail="Insufficient permissions to create tokens")
 
+    service_ids = [str(sid) for sid in (token.service_ids or [token.service_id])]
+    primary_service_id = str(token.service_id or service_ids[0])
+
+    rpc_params = {
+        "p_salon_id": str(token.salon_id),
+        "p_customer_id": customer_id,
+        "p_service_id": primary_service_id,
+        "p_worker_id": str(token.worker_id) if token.worker_id else None,
+        "p_guest_name": guest_name,
+        "p_guest_phone": token.guest_phone,
+        "p_is_booking": token.is_booking,
+        "p_scheduled_for": token.scheduled_for.isoformat() if token.scheduled_for else None,
+        "p_service_ids": service_ids,
+    }
+
     try:
         async_supabase_admin = await get_async_supabase_admin()
-        res = await async_supabase_admin.rpc("create_queue_token", {
-            "p_salon_id": str(token.salon_id),
-            "p_customer_id": customer_id,
-            "p_service_id": str(token.service_id),
-            "p_worker_id": str(token.worker_id) if token.worker_id else None,
-            "p_guest_name": guest_name,
-            "p_guest_phone": token.guest_phone,
-            "p_is_booking": token.is_booking,
-            "p_scheduled_for": token.scheduled_for.isoformat() if token.scheduled_for else None,
-        }).execute()
+        try:
+            res = await async_supabase_admin.rpc("create_queue_token", rpc_params).execute()
+        except Exception as rpc_err:
+            rpc_err_str = str(rpc_err)
+            # If database has not yet received migration 037, retry with 8 parameters
+            if "p_service_ids" in rpc_err_str or ("function" in rpc_err_str.lower() and "create_queue_token" in rpc_err_str.lower()):
+                rpc_params_legacy = {k: v for k, v in rpc_params.items() if k != "p_service_ids"}
+                res = await async_supabase_admin.rpc("create_queue_token", rpc_params_legacy).execute()
+                if res.data and len(res.data) > 0 and len(service_ids) > 1:
+                    try:
+                        await async_supabase_admin.table("tokens").update({
+                            "service_ids": service_ids
+                        }).eq("id", res.data[0]["id"]).execute()
+                        res.data[0]["service_ids"] = service_ids
+                    except Exception:
+                        pass
+            else:
+                raise rpc_err
+
         if not res.data:
             raise HTTPException(status_code=500, detail="Failed to generate token. Please try again.")
-        return res.data[0]
+
+        enriched = await enrich_tokens_services(res.data, async_supabase_admin)
+        return enriched[0]
     except Exception as e:
         err_str = str(e)
         error_messages = {
@@ -100,7 +183,8 @@ async def get_my_active_token(user: dict = Depends(get_current_user)):
     if not res.data:
         raise HTTPException(status_code=404, detail="No active token found")
 
-    return res.data[0]  # Frontend accesses data directly (not data.token)
+    enriched = await enrich_tokens_services(res.data, async_supabase_admin)
+    return enriched[0]  # Frontend accesses data directly (not data.token)
 
 
 @router.get("/history")
@@ -116,7 +200,8 @@ async def get_token_history(user: dict = Depends(get_current_user)):
     res = await async_supabase_admin.table("tokens").select(
         "*, salons(name), services(name, price), workers(name), ratings(id)"
     ).eq("customer_id", user_id).order("created_at", desc=True).limit(50).execute()
-    return {"tokens": res.data}
+    enriched = await enrich_tokens_services(res.data or [], async_supabase_admin)
+    return {"tokens": enriched}
 
 
 @router.get("/{token_id}")
@@ -136,7 +221,8 @@ async def get_single_token(token_id: UUID, user: dict = Depends(get_current_user
         require_salon_access(user, token["salon_id"], {"salon_owner", "worker"})
     elif role != "super_admin":
         raise HTTPException(status_code=403, detail="Insufficient permissions")
-    return token
+    enriched = await enrich_tokens_services([token], async_supabase_admin)
+    return enriched[0]
 
 
 @router.put("/{token_id}/{action}")

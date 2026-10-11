@@ -196,12 +196,21 @@ export default function MyToken() {
         </div>
 
         {/* Service info */}
-        <div className="bg-surface-tertiary rounded-xl p-3 flex items-center justify-between mb-4">
-          <div>
-            <p className="text-xs text-dark-200">Service</p>
-            <p className="font-semibold text-white text-sm">{token.services?.name ?? 'Haircut'}</p>
+        <div className="bg-surface-tertiary rounded-xl p-3.5 flex items-center justify-between mb-4">
+          <div className="min-w-0 pr-3">
+            <p className="text-xs text-dark-200">
+              {token.selected_services?.length > 1 ? `${token.selected_services.length} Services` : 'Service'}
+            </p>
+            <p className="font-semibold text-white text-sm truncate">
+              {token.services_summary || token.services?.name || 'Haircut'}
+            </p>
+            {token.selected_services?.length > 1 && (
+              <p className="text-[11px] text-brand-400 font-medium mt-0.5">
+                Total: ₹{token.total_price ?? token.services?.price} · {token.total_duration ?? token.services?.duration_minutes}m
+              </p>
+            )}
           </div>
-          <div className="text-right">
+          <div className="text-right shrink-0">
             <p className="text-xs text-dark-200">Salon</p>
             <p className="font-semibold text-white text-sm truncate max-w-[120px]">
               {token.salons?.name ?? '—'}

@@ -80,6 +80,8 @@ async def get_salon_workers(salon_id: UUID):
     return {"workers": res.data}
 
 
+from .tokens import enrich_tokens_services
+
 @router.get("/{salon_id}/queue/live")
 async def get_live_queue(salon_id: UUID):
     """Returns today's token list for the public live queue display.
@@ -89,10 +91,17 @@ async def get_live_queue(salon_id: UUID):
     See /queue/admin for the authenticated owner/worker view with customer names.
     """
     async_supabase_admin = await get_async_supabase_admin()
-    res = await async_supabase_admin.table("tokens").select(
-        "id, token_number, status, service_id, worker_id, services(name, duration_minutes), workers(name, photo_url), is_booking, scheduled_for, guest_name"
-    ).eq("salon_id", salon_id).in_("status", ["waiting", "called", "serving", "scheduled"]).order("token_number").execute()
-    return {"tokens": res.data}
+    try:
+        res = await async_supabase_admin.table("tokens").select(
+            "id, token_number, status, service_id, service_ids, worker_id, services(name, duration_minutes, price), workers(name, photo_url), is_booking, scheduled_for, guest_name"
+        ).eq("salon_id", salon_id).in_("status", ["waiting", "called", "serving", "scheduled"]).order("token_number").execute()
+    except Exception:
+        res = await async_supabase_admin.table("tokens").select(
+            "id, token_number, status, service_id, worker_id, services(name, duration_minutes, price), workers(name, photo_url), is_booking, scheduled_for, guest_name"
+        ).eq("salon_id", salon_id).in_("status", ["waiting", "called", "serving", "scheduled"]).order("token_number").execute()
+
+    tokens = await enrich_tokens_services(res.data or [], async_supabase_admin)
+    return {"tokens": tokens}
 
 
 @router.get("/{salon_id}/queue/admin")
@@ -115,12 +124,21 @@ async def get_admin_live_queue(
     today = datetime.now(ist_tz).strftime("%Y-%m-%d")
 
     async_supabase_admin = await get_async_supabase_admin()
-    res = await async_supabase_admin.table("tokens").select(
-        "id, token_number, status, service_id, worker_id, "
-        "services(name, duration_minutes), workers(name, photo_url), "
-        "profiles!customer_id(full_name, phone), guest_name, guest_phone, is_booking, scheduled_for"
-    ).eq("salon_id", salon_id).eq("date", today).order("token_number").execute()
-    return {"tokens": res.data}
+    try:
+        res = await async_supabase_admin.table("tokens").select(
+            "id, token_number, status, service_id, service_ids, worker_id, "
+            "services(name, duration_minutes, price), workers(name, photo_url), "
+            "profiles!customer_id(full_name, phone), guest_name, guest_phone, is_booking, scheduled_for"
+        ).eq("salon_id", salon_id).eq("date", today).order("token_number").execute()
+    except Exception:
+        res = await async_supabase_admin.table("tokens").select(
+            "id, token_number, status, service_id, worker_id, "
+            "services(name, duration_minutes, price), workers(name, photo_url), "
+            "profiles!customer_id(full_name, phone), guest_name, guest_phone, is_booking, scheduled_for"
+        ).eq("salon_id", salon_id).eq("date", today).order("token_number").execute()
+
+    tokens = await enrich_tokens_services(res.data or [], async_supabase_admin)
+    return {"tokens": tokens}
 
 
 @router.get("/{salon_id}/stats")

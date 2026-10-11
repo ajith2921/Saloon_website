@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, ConfigDict, field_validator
+from pydantic import BaseModel, Field, ConfigDict, field_validator, model_validator
 from typing import Optional, Literal
 from uuid import UUID
 import re
@@ -34,12 +34,24 @@ def _validate_photo_url(v: Optional[str]) -> Optional[str]:
 
 class TokenCreate(BaseModel):
     salon_id: UUID
-    service_id: UUID
+    service_id: Optional[UUID] = None
+    service_ids: Optional[list[UUID]] = None
     worker_id: Optional[UUID] = None
     guest_name: Optional[str] = None
     guest_phone: Optional[str] = None
     is_booking: Optional[bool] = False
     scheduled_for: Optional[datetime] = None
+
+    @model_validator(mode="after")
+    def validate_services(self) -> "TokenCreate":
+        if not self.service_id and not self.service_ids:
+            raise ValueError("At least one service must be selected")
+        if self.service_ids and len(self.service_ids) > 0:
+            if not self.service_id:
+                self.service_id = self.service_ids[0]
+        elif self.service_id:
+            self.service_ids = [self.service_id]
+        return self
 
 class TokenReassign(BaseModel):
     worker_id: Optional[UUID] = None

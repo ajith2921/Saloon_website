@@ -167,7 +167,7 @@ export default function WorkerDashboard() {
                       <TokenBadge number={token.token_number} status={token.status} size="lg" />
                       <div className="mt-2 space-y-1">
                         <p className="font-medium text-dark-100">{token.profiles?.full_name || token.guest_name || 'Guest'}</p>
-                        <p className="text-sm text-brand-300">{token.services?.name}</p>
+                        <p className="text-sm text-brand-300">{token.services_summary || token.services?.name}</p>
                       </div>
                     </div>
                     <Button
@@ -221,7 +221,7 @@ export default function WorkerDashboard() {
                         {token.profiles?.full_name || token.guest_name || 'Guest'}
                       </p>
                       <p className="text-sm text-dark-200">
-                        {token.services?.name}
+                        {token.services_summary || token.services?.name}
                       </p>
                     </div>
                   </div>

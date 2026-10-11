@@ -28,7 +28,7 @@ export default function QueueManagement() {
   const [reassignModalOpen, setReassignModalOpen] = useState(false)
   const [targetToken, setTargetToken] = useState(null)
   
-  const [walkInForm, setWalkInForm] = useState({ guest_name: '', guest_phone: '', service_id: '', worker_id: '' })
+  const [walkInForm, setWalkInForm] = useState({ guest_name: '', guest_phone: '', service_id: '', service_ids: [], worker_id: '' })
   const [reassignWorkerId, setReassignWorkerId] = useState('')
 
   const updateStatus = async (tokenId, action, tokenData = null) => {
@@ -117,18 +117,24 @@ export default function QueueManagement() {
 
   const handleWalkInSubmit = async (e) => {
     e.preventDefault()
-    if (!walkInForm.guest_name || !walkInForm.service_id) return showError("Name and service are required")
+    const effectiveServiceIds = walkInForm.service_ids?.length 
+      ? walkInForm.service_ids 
+      : (walkInForm.service_id ? [walkInForm.service_id] : [])
+    if (!walkInForm.guest_name || effectiveServiceIds.length === 0) {
+      return showError("Name and at least one service are required")
+    }
     try {
       await api.post('/api/tokens', {
         salon_id: salonId,
-        service_id: walkInForm.service_id,
+        service_id: effectiveServiceIds[0],
+        service_ids: effectiveServiceIds,
         worker_id: walkInForm.worker_id || null,
         guest_name: walkInForm.guest_name,
         guest_phone: walkInForm.guest_phone || null
       })
       success("Walk-in token added")
       setWalkInModalOpen(false)
-      setWalkInForm({ guest_name: '', guest_phone: '', service_id: '', worker_id: '' })
+      setWalkInForm({ guest_name: '', guest_phone: '', service_id: '', service_ids: [], worker_id: '' })
     } catch (err) {
       showError(err.message || "Failed to create walk-in token")
     }
@@ -202,7 +208,7 @@ export default function QueueManagement() {
                     {waitingTokens[0].guest_name || waitingTokens[0].profiles?.full_name || 'Walk-in Customer'}
                   </p>
                   <p className="text-xs text-dark-100 mt-0.5 mb-2">
-                    {waitingTokens[0].services?.name} · {waitingTokens[0].services?.duration_minutes}m · Assigned to <span className="text-white font-medium">{waitingTokens[0].workers?.name ?? 'Any Barber'}</span>
+                    {waitingTokens[0].services_summary || waitingTokens[0].services?.name} · {waitingTokens[0].total_duration || waitingTokens[0].services?.duration_minutes}m · Assigned to <span className="text-white font-medium">{waitingTokens[0].workers?.name ?? 'Any Barber'}</span>
                   </p>
                   <div className="mb-4 flex items-center justify-center">
                     {(waitingTokens[0].guest_phone || waitingTokens[0].profiles?.phone) ? (
@@ -268,7 +274,7 @@ export default function QueueManagement() {
                       
                       <div className="flex-1 min-w-0 text-center sm:text-left w-full">
                         <p className="font-semibold text-base sm:text-lg text-white truncate">{t.guest_name || t.profiles?.full_name || 'Walk-in Customer'}</p>
-                        <p className="text-xs sm:text-sm text-dark-100 mt-0.5">{t.services?.name} · {t.services?.duration_minutes}m</p>
+                        <p className="text-xs sm:text-sm text-dark-100 mt-0.5">{t.services_summary || t.services?.name} · {t.total_duration || t.services?.duration_minutes}m</p>
                         {(t.guest_phone || t.profiles?.phone) ? (
                           <p className="text-xs text-brand-400 flex items-center justify-center sm:justify-start gap-1 mt-1 truncate">
                             <Phone className="w-3 h-3 shrink-0" /> {t.guest_phone || t.profiles?.phone}
@@ -380,7 +386,7 @@ export default function QueueManagement() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-xs sm:text-sm font-medium text-white truncate">{t.guest_name || t.profiles?.full_name || 'Walk-in'}</p>
-                        <p className="text-[11px] text-dark-200 truncate">{t.services?.name}</p>
+                        <p className="text-[11px] text-dark-200 truncate">{t.services_summary || t.services?.name}</p>
                         {(t.guest_phone || t.profiles?.phone) ? (
                           <p className="text-[10px] text-brand-300 flex items-center gap-1 mt-0.5 truncate">
                             <Phone className="w-2.5 h-2.5 shrink-0" /> {t.guest_phone || t.profiles?.phone}
@@ -439,7 +445,7 @@ export default function QueueManagement() {
                         <div className="flex-1 min-w-0">
                           <p className="text-xs sm:text-sm font-medium text-white truncate">{t.guest_name || t.profiles?.full_name || 'Appointment'}</p>
                           <p className="text-[11px] text-brand-300">
-                            {t.scheduled_for ? new Date(t.scheduled_for).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''} · {t.services?.name}
+                            {t.scheduled_for ? new Date(t.scheduled_for).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''} · {t.services_summary || t.services?.name}
                           </p>
                         </div>
                         <div className="flex items-center gap-1 shrink-0">
@@ -485,7 +491,7 @@ export default function QueueManagement() {
                     <tr key={t.id} className="text-dark-100">
                       <td className="py-3 font-medium text-white">#{t.token_number}</td>
                       <td className="py-3">{t.guest_name || t.profiles?.full_name || '—'}</td>
-                      <td className="py-3">{t.services?.name ?? '—'}</td>
+                      <td className="py-3">{(t.services_summary || t.services?.name) ?? '—'}</td>
                       <td className="py-3">{t.workers?.name ?? '—'}</td>
                       <td className="py-3"><TokenBadge status={t.status} /></td>
                     </tr>
@@ -501,7 +507,7 @@ export default function QueueManagement() {
                     <span className="font-bold text-white text-sm">#{t.token_number}</span>
                     <div className="min-w-0">
                       <p className="text-xs font-medium text-white truncate">{t.guest_name || t.profiles?.full_name || '—'}</p>
-                      <p className="text-[11px] text-dark-200 truncate">{t.services?.name ?? '—'} {t.workers?.name ? `· ${t.workers.name}` : ''}</p>
+                      <p className="text-[11px] text-dark-200 truncate">{(t.services_summary || t.services?.name) ?? '—'} {t.workers?.name ? `· ${t.workers.name}` : ''}</p>
                     </div>
                   </div>
                   <TokenBadge status={t.status} />
@@ -540,16 +546,53 @@ export default function QueueManagement() {
             />
             <p className="text-xs text-dark-200 mt-1">For SMS notifications when token is called</p>
           </div>
-          <Select
-            label="Service"
-            value={walkInForm.service_id}
-            onChange={(e) => setWalkInForm({ ...walkInForm, service_id: e.target.value })}
-            options={[
-              { value: '', label: 'Select a Service' },
-              ...services.map(s => ({ value: s.id, label: s.name }))
-            ]}
-            required
-          />
+          <div>
+            <label className="block text-sm font-medium text-dark-100 mb-1.5">
+              Services <span className="text-xs text-brand-400 font-normal">(Select one or more)</span>
+            </label>
+            <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto p-1 bg-surface-tertiary rounded-xl border border-white/5">
+              {services.map(s => {
+                const current = walkInForm.service_ids?.length ? walkInForm.service_ids : (walkInForm.service_id ? [walkInForm.service_id] : [])
+                const isSelected = current.includes(s.id)
+                return (
+                  <div
+                    key={s.id}
+                    onClick={() => {
+                      const next = isSelected
+                        ? current.filter(id => id !== s.id)
+                        : [...current, s.id]
+                      setWalkInForm({
+                        ...walkInForm,
+                        service_id: next[0] || '',
+                        service_ids: next,
+                      })
+                    }}
+                    className={`p-2.5 rounded-lg border text-xs cursor-pointer flex justify-between items-center transition-all ${
+                      isSelected
+                        ? 'border-brand-500 bg-brand-500/20 text-brand-300 font-semibold shadow-glow-sm'
+                        : 'border-white/5 bg-surface-secondary text-dark-100 hover:border-white/10'
+                    }`}
+                  >
+                    <span className="truncate mr-1.5">{s.name}</span>
+                    <span className="shrink-0 text-white font-bold">₹{s.price}</span>
+                  </div>
+                )
+              })}
+            </div>
+            {(() => {
+              const current = walkInForm.service_ids?.length ? walkInForm.service_ids : (walkInForm.service_id ? [walkInForm.service_id] : [])
+              const selectedSvcs = services.filter(s => current.includes(s.id))
+              if (selectedSvcs.length === 0) return null
+              const totalP = selectedSvcs.reduce((acc, s) => acc + (Number(s.price) || 0), 0)
+              const totalD = selectedSvcs.reduce((acc, s) => acc + (s.duration_minutes || 0), 0)
+              return (
+                <div className="mt-2 flex items-center justify-between text-xs px-2.5 py-1.5 rounded-lg bg-brand-500/10 text-brand-300 border border-brand-500/20">
+                  <span>{selectedSvcs.length} {selectedSvcs.length === 1 ? 'service' : 'services'} selected ({totalD}m)</span>
+                  <span className="font-bold text-white">Total: ₹{totalP}</span>
+                </div>
+              )
+            })()}
+          </div>
           <Select
             label="Preferred Barber (Optional)"
             value={walkInForm.worker_id}

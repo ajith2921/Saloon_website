@@ -1,7 +1,18 @@
 from __future__ import annotations
 
 from typing import Optional
-from supabase import create_client, Client, AsyncClient, create_async_client
+try:
+    from supabase import create_client, Client, AsyncClient, create_async_client
+except ImportError:
+    from supabase import create_client, Client
+    try:
+        from supabase._async.client import AsyncClient
+    except ImportError:
+        from supabase import AClient as AsyncClient  # type: ignore
+    try:
+        from supabase import acreate_client as create_async_client  # type: ignore
+    except ImportError:
+        pass
 from .config import settings
 
 # Lazy-initialised admin client — created on first access to avoid failing

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link, useSearchParams } from 'react-router-dom'
-import { Scissors, Clock, ArrowRight, ChevronLeft, AlertCircle, CheckCircle } from 'lucide-react'
+import { Scissors, Clock, ArrowRight, ChevronLeft, AlertCircle, CheckCircle, Check } from 'lucide-react'
 import { useSalon, useSalonServices, useSalonWorkers } from '../../hooks/useApi'
 import { useRealtimeQueue } from '../../hooks/useRealtime'
 import { useToast } from '../../context/ToastContext'
@@ -17,7 +17,7 @@ export default function GetToken() {
   const { data: workersData }    = useSalonWorkers(salonId)
   const { waitingTokens } = useRealtimeQueue(salonId)
 
-  const [selectedService, setSelectedService] = useState(null)
+  const [selectedServices, setSelectedServices] = useState([])
   const [selectedWorker,  setSelectedWorker]  = useState(null)
   const [loading, setLoading]                 = useState(false)
   const [token, setToken]                     = useState(null)
@@ -27,24 +27,46 @@ export default function GetToken() {
   const services = (servicesData?.services ?? []).filter((s) => s.status === 'active')
   const workers  = (workersData?.workers   ?? []).filter((w) => w.status === 'active')
 
-  // Auto-select first service
+  // Auto-select first service if none selected
   useEffect(() => {
-    if (services.length > 0 && !selectedService) setSelectedService(services[0])
-  }, [services, selectedService])
+    if (services.length > 0 && selectedServices.length === 0) {
+      setSelectedServices([services[0]])
+    }
+  }, [services, selectedServices.length])
 
-  const waitMins = waitingTokens.length * (selectedService?.duration_minutes ?? 30)
+  const toggleService = (service) => {
+    setSelectedServices(prev => {
+      const isSelected = prev.some(s => s.id === service.id)
+      if (isSelected) {
+        if (prev.length <= 1) {
+          info('At least one service must be selected')
+          return prev
+        }
+        return prev.filter(s => s.id !== service.id)
+      } else {
+        return [...prev, service]
+      }
+    })
+  }
+
+  const totalDuration = selectedServices.reduce((sum, s) => sum + (s.duration_minutes || 0), 0)
+  const totalPrice = selectedServices.reduce((sum, s) => sum + (Number(s.price) || 0), 0)
+  const servicesSummary = selectedServices.map(s => s.name).join(', ')
+
+  const waitMins = waitingTokens.length * (totalDuration || 30)
   const estimatedMin = Math.max(0, waitMins - 5)
   const estimatedMax = waitMins + 10
 
   const handleGetToken = async () => {
-    if (!selectedService) { info('Please select a service'); return }
+    if (selectedServices.length === 0) { info('Please select at least one service'); return }
     if (isBooking && !scheduledFor) { info('Please select a date and time for your appointment'); return }
 
     setLoading(true)
     try {
       const payload = {
         salon_id:   salonId,
-        service_id: selectedService.id,
+        service_id: selectedServices[0].id,
+        service_ids: selectedServices.map(s => s.id),
         worker_id:  selectedWorker?.id ?? null,
         is_booking: isBooking,
       }
@@ -82,7 +104,7 @@ export default function GetToken() {
             <p className="token-number font-display text-[6rem] font-black text-white leading-none relative z-10 drop-shadow-lg">#{token.token_number}</p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 mb-8">
+          <div className="grid grid-cols-2 gap-4 mb-4">
             <div className="bg-surface-tertiary/50 border border-white/5 rounded-2xl p-4">
               <p className="text-[10px] font-semibold text-dark-200 uppercase tracking-widest mb-1">Status</p>
               <p className="font-display font-bold text-2xl text-white capitalize">{token.status}</p>
@@ -105,6 +127,24 @@ export default function GetToken() {
                   {waitMins === 0 ? 'Next!' : `${estimatedMin}–${estimatedMax}m`}
                 </p>
               )}
+            </div>
+          </div>
+
+          {/* Booked Services Summary */}
+          <div className="bg-surface-tertiary/50 border border-white/5 rounded-2xl p-4 mb-6 text-left">
+            <div className="flex justify-between items-start gap-2">
+              <div className="min-w-0">
+                <p className="text-[10px] font-semibold text-dark-200 uppercase tracking-widest mb-1">
+                  {selectedServices.length > 1 ? `${selectedServices.length} Services Booked` : 'Service Booked'}
+                </p>
+                <p className="font-semibold text-white text-sm">
+                  {token.services_summary || servicesSummary}
+                </p>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-brand-400 font-bold text-base">₹{token.total_price ?? totalPrice}</p>
+                <p className="text-xs text-dark-200">{token.total_duration ?? totalDuration} min</p>
+              </div>
             </div>
           </div>
 
@@ -156,30 +196,76 @@ export default function GetToken() {
 
         {/* 1. Services */}
         <div className="mb-6">
-          <label className="block text-sm font-semibold text-white mb-3">1. Select Service</label>
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <label className="block text-sm font-semibold text-white">
+                1. Select Services <span className="text-brand-400 text-xs font-normal">(Choose one or more)</span>
+              </label>
+              <p className="text-xs text-dark-200 mt-0.5">Tap to select or deselect multiple services</p>
+            </div>
+            {selectedServices.length > 0 && (
+              <span className="px-2.5 py-1 rounded-full bg-brand-500/20 border border-brand-500/30 text-brand-300 text-xs font-semibold">
+                {selectedServices.length} selected
+              </span>
+            )}
+          </div>
+
           <div className="grid sm:grid-cols-2 gap-3">
-            {services.map(s => (
-              <div 
-                key={s.id}
-                onClick={() => setSelectedService(s)}
-                className={`p-4 rounded-xl border transition-all cursor-pointer ${
-                  selectedService?.id === s.id 
-                    ? 'border-brand-500 bg-brand-500/10' 
-                    : 'border-white/5 bg-surface-tertiary hover:border-white/10'
-                }`}
-              >
-                <div className="flex justify-between items-start mb-1">
-                  <p className={`font-semibold ${selectedService?.id === s.id ? 'text-brand-400' : 'text-white'}`}>
-                    {s.name}
-                  </p>
-                  <p className="text-sm font-bold text-white">₹{s.price}</p>
+            {services.map(s => {
+              const isSelected = selectedServices.some(sel => sel.id === s.id)
+              return (
+                <div 
+                  key={s.id}
+                  onClick={() => toggleService(s)}
+                  className={`p-4 rounded-xl border transition-all cursor-pointer relative overflow-hidden select-none ${
+                    isSelected 
+                      ? 'border-brand-500 bg-brand-500/10 shadow-glow-sm ring-1 ring-brand-500/30' 
+                      : 'border-white/5 bg-surface-tertiary hover:border-white/10'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3">
+                      <div className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
+                        isSelected ? 'bg-brand-500 border-brand-500 text-white' : 'border-white/20 bg-surface-primary'
+                      }`}>
+                        {isSelected && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                      </div>
+                      <div>
+                        <p className={`font-semibold text-sm ${isSelected ? 'text-brand-400 font-bold' : 'text-white'}`}>
+                          {s.name}
+                        </p>
+                        <p className="text-xs text-dark-200 flex items-center gap-1 mt-1">
+                          <Clock className="w-3 h-3 text-brand-400" /> {s.duration_minutes} min
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-sm font-bold text-white shrink-0">₹{s.price}</p>
+                  </div>
                 </div>
-                <p className="text-xs text-dark-200 flex items-center gap-1">
-                  <Clock className="w-3 h-3" /> {s.duration_minutes} min
+              )
+            })}
+          </div>
+
+          {/* Multiple Services Live Summary Bar */}
+          {selectedServices.length > 0 && (
+            <div className="mt-3 p-3.5 rounded-xl bg-gradient-to-r from-brand-500/10 via-surface-tertiary to-brand-500/5 border border-brand-500/20 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                <Scissors className="w-4 h-4 text-brand-400 shrink-0" />
+                <p className="text-xs text-white truncate max-w-[260px] sm:max-w-sm">
+                  <span className="font-semibold text-brand-300">Selected:</span> {servicesSummary}
                 </p>
               </div>
-            ))}
-          </div>
+              <div className="flex items-center gap-4 text-xs font-semibold text-white ml-auto">
+                <span className="flex items-center gap-1 text-dark-100">
+                  <Clock className="w-3.5 h-3.5 text-brand-400" />
+                  {totalDuration} mins total
+                </span>
+                <span className="text-brand-400 text-sm font-bold">
+                  ₹{totalPrice}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 2. Worker (Optional) */}
@@ -264,10 +350,13 @@ export default function GetToken() {
           fullWidth 
           onClick={handleGetToken} 
           loading={loading}
-          disabled={!selectedService || (isBooking && !scheduledFor)}
+          disabled={selectedServices.length === 0 || (isBooking && !scheduledFor)}
           className="h-14 text-lg"
         >
-          {isBooking ? 'Book Appointment' : 'Join Live Queue'} <ArrowRight className="w-5 h-5 ml-2" />
+          {isBooking 
+            ? `Book Appointment (₹${totalPrice})` 
+            : `Join Live Queue (₹${totalPrice})`
+          } <ArrowRight className="w-5 h-5 ml-2" />
         </Button>
       </div>
 

@@ -59,12 +59,14 @@ export default function History() {
                     <p className="font-semibold text-white text-sm truncate pr-2">
                       {token.salons?.name ?? 'Salon'}
                     </p>
-                    {token.services?.price && (
-                      <span className="text-xs text-brand-400 font-bold whitespace-nowrap">₹{token.services.price}</span>
+                    {(token.total_price || token.services?.price) && (
+                      <span className="text-xs text-brand-400 font-bold whitespace-nowrap">
+                        ₹{token.total_price ?? token.services?.price}
+                      </span>
                     )}
                   </div>
                   <p className="text-xs text-dark-200 mt-0.5">
-                    {token.services?.name} · {formatDate(token.created_at)}
+                    {token.services_summary || token.services?.name} · {formatDate(token.created_at)}
                   </p>
                   <div className="flex items-center gap-2 mt-2">
                     <TokenBadge status={token.status} />
@@ -106,13 +108,27 @@ export default function History() {
               <span>Token Number</span>
               <span className="text-white font-medium">#{receiptToken.token_number}</span>
             </div>
-            <div className="flex justify-between py-1 border-t border-white/10 pt-4 mt-2">
-              <span>{receiptToken.services?.name}</span>
-              <span className="text-white font-medium">₹{receiptToken.services?.price}</span>
+            
+            {/* Services Line Items */}
+            <div className="border-t border-white/10 pt-3 mt-2 flex flex-col gap-2">
+              {receiptToken.selected_services && receiptToken.selected_services.length > 0 ? (
+                receiptToken.selected_services.map((svc, idx) => (
+                  <div key={svc.id || idx} className="flex justify-between py-0.5">
+                    <span>{svc.name}</span>
+                    <span className="text-white font-medium">₹{svc.price}</span>
+                  </div>
+                ))
+              ) : (
+                <div className="flex justify-between py-0.5">
+                  <span>{receiptToken.services?.name || 'Service'}</span>
+                  <span className="text-white font-medium">₹{receiptToken.services?.price}</span>
+                </div>
+              )}
             </div>
+
             <div className="flex justify-between py-3 mt-2 border-t border-white/10 font-bold text-base">
               <span className="text-white">Total</span>
-              <span className="text-brand-400">₹{receiptToken.services?.price}</span>
+              <span className="text-brand-400">₹{receiptToken.total_price ?? receiptToken.services?.price}</span>
             </div>
             <Button className="mt-4 print:hidden" onClick={() => window.print()} fullWidth>
               Print PDF
